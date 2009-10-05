@@ -11,6 +11,7 @@
 
 #include "Defiant.h"
 
+extern PetscErrorCode TestIterate();
 #undef __FUNCT__
 #define __FUNCT__ "main"
 int main(int argc, char **argv) {
@@ -20,6 +21,7 @@ int main(int argc, char **argv) {
   PetscInitialize(&argc, &argv, (char *) 0, help);
 
   ierr = DefiantIMPES2PhBuckleyLeverett();CHKERRQ(ierr);
+  //ierr = TestIterate();CHKERRQ(ierr);
 
   ierr = PetscFinalize();CHKERRQ(ierr);
 
@@ -111,22 +113,35 @@ PetscErrorCode ComputeMatrix(DMMG dmmg, Mat jac, Mat B) {
 
 #undef __FUNCT__
 #define __FUNCT__ "TestIterate"
-PetscErrorCode TestIterate(BlackOilReservoirSimulation* MySim) {
+PetscErrorCode TestIterate() {
   PetscErrorCode ierr;
   PetscInt i, j, k, mx, my, mz, xm, ym, zm, xs, ys, zs, rank;
   PetscInt BlockSize;
   PetscScalar ***array;
   PetscScalar *array2;
   Vec Coords;
+  Vec Pooo;
+  Vec Mooo;
+  DA da;
 
   PetscFunctionBegin;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  ierr = DAView(MySim->SimDA, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
 
-  ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
+  ierr = DACreate3d(PETSC_COMM_WORLD, DA_NONPERIODIC, DA_STENCIL_STAR, -3, -3,
+        -3, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, 1, 1, 0, 0, 0,
+        &(da));CHKERRQ(ierr);
+  ierr = DACreateGlobalVector(da, &(Pooo));CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecDuplicate(Pooo,&Mooo);CHKERRQ(ierr);
 
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Po, &array);CHKERRQ(ierr);
+
+  ierr = DAView(da, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  ierr = DAGetInfo(da, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
+
+  ierr = DAGetCorners(da, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
+
+
+  ierr = DAVecGetArray(da,Pooo, &array);CHKERRQ(ierr);
+
 
   fprintf(stderr, "\n size in x=%d  in y=%d in z=%d\n", xm, ym, zm);
   fprintf(
@@ -139,63 +154,43 @@ PetscErrorCode TestIterate(BlackOilReservoirSimulation* MySim) {
       for (i = xs; i < xs + xm; i++) {
         if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz
             - 1) {
-          array[k][j][i] = -1.0;
-          //fprintf(stderr,"Proc rank: %d at boundary location i=%d j=%d k=%d, array is:%f\n", rank, i,j,k, array[k][j][i]);
+          array[k][j][i] = -3.1415912654;
+          PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Proc rank: %d at boundary location i=%d j=%d k=%d, array is:%f\n", rank, i,j,k, array[k][j][i]);
+          ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD);CHKERRQ(ierr);
         } else {
           array[k][j][i] = rank;
-          //fprintf(stderr,"Proc rank: %d at location i=%d j=%d k=%d, array is:%f\n", rank, i,j,k, array[k][j][i]);
+          PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Proc rank: %d at location i=%d j=%d k=%d, array is:%f\n", rank, i,j,k, array[k][j][i]);
+          ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD);CHKERRQ(ierr);
+
         }
       }
     }
   }
 
-  ierr = DAVecRestoreArray(MySim->SimDA, MySim->Po, &array);CHKERRQ(ierr);
-  ierr = VecAssemblyBegin(MySim->Po);CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(MySim->Po);CHKERRQ(ierr);
+  ierr = DAVecRestoreArray(da, Pooo, &array);CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(Pooo);CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(Pooo);CHKERRQ(ierr);
 
-  ierr = DAGetCoordinates(MySim->SimDA, &Coords);CHKERRQ(ierr);
-  if (!Coords) {
-    ierr
-        = DASetUniformCoordinates(MySim->SimDA, 0.0, 1.0, -2.0, -1.0, 3.0, 5.0);
-    CHKERRQ(ierr);
-    ierr = DAGetCoordinates(MySim->SimDA, &Coords);
-    CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n Printing Poo \n");CHKERRQ(ierr);
+  ierr = VecView(Pooo,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+  ierr = DAGetLocalVector(da,&Mooo);CHKERRQ(ierr);
+  ierr = DAGlobalToLocalBegin(da,Pooo,INSERT_VALUES,Mooo);CHKERRQ(ierr);
+  ierr = DAGlobalToLocalEnd(da,Pooo,INSERT_VALUES,Mooo);CHKERRQ(ierr);
+
+  ierr = DAVecGetArray(da,Mooo,&array);CHKERRQ(ierr);
+
+
+
+  if (rank==0){
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Proc rank: %d array is:%f\n", rank, array[1][1][5]);
+    ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD);CHKERRQ(ierr);
   }
 
-  ierr = VecGetBlockSize(Coords, &BlockSize);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n blocksize for DA is:%d", BlockSize);CHKERRQ(ierr);
-
-  ierr = VecGetArray(Coords, &array2);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\nX_COORDINATES %d double\n", xm);CHKERRQ(ierr);
-  for (i = 0; i < xm; i++) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "\n%G ", PetscRealPart(array2[i*3]));
-    CHKERRQ(ierr);
+  if (rank==1){
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Proc rank: %d array is:%f\n", rank, array[1][1][4]);
+    ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD);CHKERRQ(ierr);
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\nY_COORDINATES %d double\n", ym);CHKERRQ(ierr);
-  for (i = 0; i < ym; i++) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "\n%G ",
-        PetscRealPart(array2[i*xm*3+1]));
-    CHKERRQ(ierr);
-  }
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\nZ_COORDINATES %d double\n", zm);CHKERRQ(ierr);
-  for (i = 0; i < zm; i++) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "\n%G ",
-        PetscRealPart(array2[i*xm*ym*3+2]));
-    CHKERRQ(ierr);
-  }
-
-  k = 0;
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n Alternate way \n");CHKERRQ(ierr);
-  for (i = 0; i < mx * my * mz; i++) {
-    //    ierr = PetscPrintf(PETSC_COMM_WORLD, "\nX_COORDINATES %G double\n", PetscRealPart(array2[k]));CHKERRQ(ierr);
-    //    ierr = PetscPrintf(PETSC_COMM_WORLD, "\nY_COORDINATES %G double\n", PetscRealPart(array2[k+1]));CHKERRQ(ierr);
-    //    ierr = PetscPrintf(PETSC_COMM_WORLD, "\nZ_COORDINATES %G double\n", PetscRealPart(array2[k+2]));CHKERRQ(ierr);
-    k = k + 3;
-  }
-
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n Alternate way \n");CHKERRQ(ierr);
-  //  ierr = VecView(Coords, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n Alternate way \n");CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }

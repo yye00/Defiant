@@ -20,25 +20,67 @@ PetscErrorCode DefiantComputeKAByHAtFaces(BlackOilReservoirSimulation* MySim) {
   PetscScalar ***LocalAKHx1m, ***LocalAKHx2m, ***LocalAKHx3m;
   PetscScalar ***LocalAKHx1p, ***LocalAKHx2p, ***LocalAKHx3p;
 
+  /* Local Temporary vectors */
+  Vec  vecLocalFlowMask;
+  Vec  vecLocalA1, vecLocalA2, vecLocalA3; /* Areas          */
+  Vec  vecLocalK11, vecLocalK22, vecLocalK33; /* Permeabilities */
+  Vec  vecLocalh1, vecLocalh2, vecLocalh3; /* heights        */
+
   PetscFunctionBegin;
 
   /* Get dimensions and extents of the local vectors */
   ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
   ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
-  /* Grab the data for the flow field */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);
+
+  /* Get the local vectors */
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalA1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalA2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalA3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalK11);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalK22);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalK33);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalh1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalh2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalh3);CHKERRQ(ierr);CHKMEMQ;
+
+  /* scatter global vectors to local ones */
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> A1  ,INSERT_VALUES, vecLocalA1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> A1  ,INSERT_VALUES, vecLocalA1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> A2  ,INSERT_VALUES, vecLocalA2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> A2  ,INSERT_VALUES, vecLocalA2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> A3  ,INSERT_VALUES, vecLocalA3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> A3  ,INSERT_VALUES, vecLocalA3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> K11 ,INSERT_VALUES, vecLocalK11 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> K11 ,INSERT_VALUES, vecLocalK11 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> K22 ,INSERT_VALUES, vecLocalK22 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> K22 ,INSERT_VALUES, vecLocalK22 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> K33 ,INSERT_VALUES, vecLocalK33 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> K33 ,INSERT_VALUES, vecLocalK33 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h1  ,INSERT_VALUES, vecLocalh1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h1  ,INSERT_VALUES, vecLocalh1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h2  ,INSERT_VALUES, vecLocalh2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h2  ,INSERT_VALUES, vecLocalh2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h3  ,INSERT_VALUES, vecLocalh3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h3  ,INSERT_VALUES, vecLocalh3  );CHKERRQ(ierr);CHKMEMQ;
+
+  /* These variables need ghost-zones */
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalFlowMask, &LocalFlowMask);CHKERRQ(ierr);
   /* Grab the local data for areas */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->A1, &LocalA1);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->A2, &LocalA2);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->A3, &LocalA3);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalA1, &LocalA1);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalA2, &LocalA2);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalA3, &LocalA3);CHKERRQ(ierr);
   /* Grab the local data for the permeabilities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K11, &LocalK11);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K22, &LocalK22);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K33, &LocalK33);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalK11, &LocalK11);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalK22, &LocalK22);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalK33, &LocalK33);CHKERRQ(ierr);
   /* Grab the local data for heights */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h1, &Localh1);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h2, &Localh2);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h3, &Localh3);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalh1, &Localh1);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalh2, &Localh2);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalh3, &Localh3);CHKERRQ(ierr);
+
   /* Grab the local data for area * permeability divided by height */
   ierr = DAVecGetArray(MySim->SimDA, MySim->AKHx1m, &LocalAKHx1m);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->AKHx2m, &LocalAKHx2m);CHKERRQ(ierr);
@@ -159,23 +201,58 @@ PetscErrorCode DefiantComputeRhoAndMuAtFaces(BlackOilReservoirSimulation* MySim)
   PetscScalar ***LocalRhoByMuox3m, ***LocalRhoByMuox3p, ***LocalRhoByMuwx3m,
       ***LocalRhoByMuwx3p, ***LocalRhoByMugx3m, ***LocalRhoByMugx3p;
 
+  /* Vectors for ghosting */
+  Vec vecLocalFlowMask;
+  Vec vecLocalPhi; /* Porosity    */
+  Vec vecLocalRhoo, vecLocalRhow, vecLocalRhog; /* Densities   */
+  Vec vecLocalMuo, vecLocalMuw, vecLocalMug; /* Viscosities */
+
   PetscFunctionBegin;
 
   /* Get dimensions and extents of the local vectors */
   ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
   ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
+
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPhi);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalRhoo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalRhow);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalRhog);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalMuo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalMuw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalMug);CHKERRQ(ierr);CHKMEMQ;
+
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Phi  ,INSERT_VALUES, vecLocalPhi  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Phi  ,INSERT_VALUES, vecLocalPhi  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhoo  ,INSERT_VALUES, vecLocalRhoo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhoo  ,INSERT_VALUES, vecLocalRhoo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhow  ,INSERT_VALUES, vecLocalRhow  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhow  ,INSERT_VALUES, vecLocalRhow  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhog  ,INSERT_VALUES, vecLocalRhog  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhog  ,INSERT_VALUES, vecLocalRhog  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Muo  ,INSERT_VALUES, vecLocalMuo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Muo  ,INSERT_VALUES, vecLocalMuo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Muw  ,INSERT_VALUES, vecLocalMuw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Muw  ,INSERT_VALUES, vecLocalMuw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Mug  ,INSERT_VALUES, vecLocalMug  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Mug  ,INSERT_VALUES, vecLocalMug  );CHKERRQ(ierr);CHKMEMQ;
+
   /* Grab the data for the flow field */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalFlowMask, &LocalFlowMask);CHKERRQ(ierr);
   /* Grab the local data for porosity */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Phi, &LocalPhi);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalPhi, &LocalPhi);CHKERRQ(ierr);
   /* Grab the Densities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhoo, &LocalRhoo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhow, &LocalRhow);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhog, &LocalRhog);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalRhoo, &LocalRhoo);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalRhow, &LocalRhow);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalRhog, &LocalRhog);CHKERRQ(ierr);
   /* Grab the viscosities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Muo, &LocalMuo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Muw, &LocalMuw);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Mug, &LocalMug);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalMuo, &LocalMuo);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalMuw, &LocalMuw);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalMug, &LocalMug);CHKERRQ(ierr);
+
+
   /* Grab the local data for the face densities */
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhoox1m, &LocalRhoox1m);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhoox1p, &LocalRhoox1p);CHKERRQ(ierr);
@@ -588,6 +665,8 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
   PetscScalar ***Localx1, ***Localx2, ***Localx3; /* Geometry    */
   PetscScalar ***LocalPo, ***LocalPw, ***LocalPg; /* Pressure    */
   PetscScalar ***LocalRhoo, ***LocalRhow, ***LocalRhog; /* Densities   */
+  /* Relative permeabilities at the cell center */
+  PetscScalar ***LocalKro, ***LocalKrw, ***LocalKrg;
   /* Relative Permeabilities at the faces */
   PetscScalar ***LocalRelPermox1m, ***LocalRelPermox1p, ***LocalRelPermox2m,
       ***LocalRelPermox2p, ***LocalRelPermox3m, ***LocalRelPermox3p;
@@ -602,32 +681,89 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
       ***LocalRhowx2p, ***LocalRhogx2m, ***LocalRhogx2p;
   PetscScalar ***LocalRhoox3m, ***LocalRhoox3p, ***LocalRhowx3m,
       ***LocalRhowx3p, ***LocalRhogx3m, ***LocalRhogx3p;
+
+  Vec vecLocalFlowMask;
+  Vec vecLocalh1, vecLocalh2, vecLocalh3;
+  Vec vecLocalx1, vecLocalx2, vecLocalx3; /* Geometry    */
+  Vec vecLocalPo, vecLocalPw, vecLocalPg; /* Pressure    */
+  Vec vecLocalRhoo, vecLocalRhow, vecLocalRhog; /* Densities   */
   /* Relative permeabilities at the cell center */
-  PetscScalar ***LocalKro, ***LocalKrw, ***LocalKrg;
+  Vec vecLocalKro, vecLocalKrw, vecLocalKrg;
 
   PetscFunctionBegin;
 
   /* Get dimensions and extents of the local vectors */
   ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
   ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
+
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalh1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalh2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalh3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalx1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalx2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalx3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPg);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalRhoo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalRhow);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalRhog);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalKro);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalKrw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalKrg);CHKERRQ(ierr);CHKMEMQ;
+
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h1  ,INSERT_VALUES, vecLocalh1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h1  ,INSERT_VALUES, vecLocalh1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h2  ,INSERT_VALUES, vecLocalh2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h2  ,INSERT_VALUES, vecLocalh2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h3  ,INSERT_VALUES, vecLocalh3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h3  ,INSERT_VALUES, vecLocalh3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> x1  ,INSERT_VALUES, vecLocalx1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> x1  ,INSERT_VALUES, vecLocalx1  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> x2  ,INSERT_VALUES, vecLocalx2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> x2  ,INSERT_VALUES, vecLocalx2  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> x3  ,INSERT_VALUES, vecLocalx3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> x3  ,INSERT_VALUES, vecLocalx3  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Po  ,INSERT_VALUES, vecLocalPo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Po  ,INSERT_VALUES, vecLocalPo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Pw  ,INSERT_VALUES, vecLocalPw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Pw  ,INSERT_VALUES, vecLocalPw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Pg  ,INSERT_VALUES, vecLocalPg  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Pg  ,INSERT_VALUES, vecLocalPg  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhoo  ,INSERT_VALUES, vecLocalRhoo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhoo  ,INSERT_VALUES, vecLocalRhoo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhow  ,INSERT_VALUES, vecLocalRhow  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhow  ,INSERT_VALUES, vecLocalRhow  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhog  ,INSERT_VALUES, vecLocalRhog  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhog  ,INSERT_VALUES, vecLocalRhog  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Kro  ,INSERT_VALUES, vecLocalKro  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Kro  ,INSERT_VALUES, vecLocalKro  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Krw  ,INSERT_VALUES, vecLocalKrw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Krw  ,INSERT_VALUES, vecLocalKrw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Krg  ,INSERT_VALUES, vecLocalKrg  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Krg  ,INSERT_VALUES, vecLocalKrg  );CHKERRQ(ierr);CHKMEMQ;
+
   /* Grab the data for the flow field */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);
-  /* Grab the local data for grid step sizes */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h1, &Localh1);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h2, &Localh2);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h3, &Localh3);CHKERRQ(ierr);
-  /* Grab the local data for geometry */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->x1, &Localx1);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->x2, &Localx2);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->x3, &Localx3);CHKERRQ(ierr);
-  /* Grab the Densities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhoo, &LocalRhoo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhow, &LocalRhow);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhog, &LocalRhog);CHKERRQ(ierr);
-  /* Grab the viscosities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Po, &LocalPo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Pw, &LocalPw);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Pg, &LocalPg);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalFlowMask, &LocalFlowMask);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalh1, &Localh1);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalh2, &Localh2);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalh3, &Localh3);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalx1, &Localx1);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalx2, &Localx2);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalx3, &Localx3);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalRhoo, &LocalRhoo);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalRhow, &LocalRhow);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalRhog, &LocalRhog);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalPo, &LocalPo);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalPw, &LocalPw);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalPg, &LocalPg);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalKro, &LocalKro);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalKrw, &LocalKrw);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalKrg, &LocalKrg);CHKERRQ(ierr);
+
   /* Grab the local data for the face Relative Permeabilities */
   ierr = DAVecGetArray(MySim->SimDA, MySim->RelPermox1m, &LocalRelPermox1m);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->RelPermox1p, &LocalRelPermox1p);CHKERRQ(ierr);
@@ -666,10 +802,7 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhowx3p, &LocalRhowx3p);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhogx3m, &LocalRhogx3m);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhogx3p, &LocalRhogx3p);CHKERRQ(ierr);
-  /* Grab the local data for the cell center relative permeabilities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Kro, &LocalKro);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Krw, &LocalKrw);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Krg, &LocalKrg);CHKERRQ(ierr);
+
 
   for (k = zs; k < zs + zm; k++) {
     for (j = ys; j < ys + ym; j++) {
@@ -678,548 +811,640 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
             - 1) {
         } else if (ABS(LocalFlowMask[k][j][i]-FLUID_FLOW) < EPSILON) {
           /* in the x1 direction */
-          if (i - xs == 1  ) {
-            LocalRelPermox1m[k][j][i] = 0.0;
-            LocalRelPermwx1m[k][j][i] = 0.0;
-            LocalRelPermgx1m[k][j][i] = 0.0;
-            if (xs+xm -i > 2)
-            {
-              DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc
-                  * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
-              else
-                LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
+          if (i == 1 || mx -i == 2){  /* if I am the point right next to the physical boundary */
+            if (i  == 1  ) {
+              LocalRelPermox1m[k][j][i] = 0.0;
+              LocalRelPermwx1m[k][j][i] = 0.0;
+              LocalRelPermgx1m[k][j][i] = 0.0;
+              if (xs+xm -i > 2)
+              {
+                DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
+                else
+                  LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
 
-              DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc
-                  * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
-              else
-                LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
+                DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
+                else
+                  LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
 
-              DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc
-                  * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
-              else
-                LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
+                DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
+                else
+                  LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
+              }
+            }
+            if (mx - i == 2) {
+              LocalRelPermox1p[k][j][i] = 0.0;
+              LocalRelPermwx1p[k][j][i] = 0.0;
+              LocalRelPermgx1p[k][j][i] = 0.0;
+              if ( i - xs > 1) {
+                DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
+                else
+                  LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
+
+                DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
+                else
+                  LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
+
+                DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
+                else
+                  LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
+              }
             }
           }
-          if (xs + xm - i == 2) {
-            LocalRelPermox1p[k][j][i] = 0.0;
-            LocalRelPermwx1p[k][j][i] = 0.0;
-            LocalRelPermgx1p[k][j][i] = 0.0;
-            if ( i - xs > 1) {
-              DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc
-                  * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                  - 1]);
-              if (DeltaPot < 0.0)
-                LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
-              else
-                LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
-
-              DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc
-                  * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                  - 1]);
-              if (DeltaPot < 0.0)
-                LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
-              else
-                LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
-
-              DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc
-                  * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                  - 1]);
-              if (DeltaPot < 0.0)
-                LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
-              else
-                LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
-            }
-          }
-          if (i - xs == 2 || xs + xm - i == 3 ) {
-            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc
-                * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                - 1]);
+          else if (i == 2 || i == mx - 3 ) { /* else if I am the point next to next to a physical boundary */
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
             if (DeltaPot < 0.0)
               LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
             else
               LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
 
-            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc
-                * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                - 1]);
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
             if (DeltaPot < 0.0)
               LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
             else
               LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
 
-            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc
-                * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                - 1]);
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
             if (DeltaPot < 0.0)
               LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
             else
               LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
 
-            DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc
-                * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
 
-            DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc
-                * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
 
-            DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc
-                * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
           }
-          if (i - xs > 2 && xs + xm - i > 3) {
-            Beta = 0.5 * Localh1[k][j][i - 1] / (Localx1[k][j][i - 1]
-                - Localx1[k][j][i - 2]);
-            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i + 1]
-                - Localx1[k][j][i]);
-
-            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc
-                * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                - 1]);
+          else if ((i == xs && xs != 0 ) || (i == xs+xm -1 && xs+xm-1 != mx-1 )){ /* else if I am the first and last point next to a ghost zone */
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
             if (DeltaPot < 0.0)
-              LocalRelPermox1m[k][j][i] = (1 + Beta) * LocalKro[k][j][i - 1]
-                  - Beta * LocalKro[k][j][i - 2];
+              LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
             else
-              LocalRelPermox1m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i]
-                  - BetaPrime * LocalKro[k][j][i + 1];
+              LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
 
-            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc
-                * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                - 1]);
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
             if (DeltaPot < 0.0)
-              LocalRelPermwx1m[k][j][i] = (1 + Beta) * LocalKrw[k][j][i - 1]
-                  - Beta * LocalKrw[k][j][i - 2];
+              LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
             else
-              LocalRelPermwx1m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i]
-                  - BetaPrime * LocalKrw[k][j][i + 1];
+              LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
 
-            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc
-                * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i
-                - 1]);
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
             if (DeltaPot < 0.0)
-              LocalRelPermgx1m[k][j][i] = (1 + Beta) * LocalKrg[k][j][i - 1]
-                  - Beta * LocalKrg[k][j][i - 2];
+              LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
             else
-              LocalRelPermgx1m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i]
-                  - BetaPrime * LocalKrg[k][j][i + 1];
+              LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
 
-            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j][i
-                - 1]);
-            BetaPrime = 0.5 * Localh1[k][j][i + 1] / (Localx1[k][j][i + 2]
-                - Localx1[k][j][i + 1]);
-
-            DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc
-                * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermox1p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta
-                  * LocalKro[k][j][i - 1];
+              LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
             else
-              LocalRelPermox1p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i
-                  + 1] - BetaPrime * LocalKro[k][j][i + 2];
+              LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
 
-            DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc
-                * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermwx1p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta
-                  * LocalKrw[k][j][i - 1];
+              LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
             else
-              LocalRelPermwx1p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i
-                  + 1] - BetaPrime * LocalKrw[k][j][i + 2];
+              LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
 
-            DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc
-                * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermgx1p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta
-                  * LocalKrg[k][j][i - 1];
+              LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
             else
-              LocalRelPermgx1p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i
-                  + 1] - BetaPrime * LocalKrg[k][j][i + 2];
+              LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
+          }
+          else if (i - xs > 1 && xs + xm - i > 2) {
+            Beta = 0.5 * Localh1[k][j][i - 1] / (Localx1[k][j][i - 1] - Localx1[k][j][i - 2]);
+            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i + 1] - Localx1[k][j][i]);
+
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox1m[k][j][i] = (1 + Beta) * LocalKro[k][j][i - 1] - Beta * LocalKro[k][j][i - 2];
+            else
+              LocalRelPermox1m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j][i + 1];
+
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx1m[k][j][i] = (1 + Beta) * LocalKrw[k][j][i - 1] - Beta * LocalKrw[k][j][i - 2];
+            else
+              LocalRelPermwx1m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j][i + 1];
+
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx1m[k][j][i] = (1 + Beta) * LocalKrg[k][j][i - 1] - Beta * LocalKrg[k][j][i - 2];
+            else
+              LocalRelPermgx1m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j][i + 1];
+
+            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j][i - 1]);
+            BetaPrime = 0.5 * Localh1[k][j][i + 1] / (Localx1[k][j][i + 2] - Localx1[k][j][i + 1]);
+
+            DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox1p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j][i - 1];
+            else
+              LocalRelPermox1p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i + 1] - BetaPrime * LocalKro[k][j][i + 2];
+
+            DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx1p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j][i - 1];
+            else
+              LocalRelPermwx1p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i + 1] - BetaPrime * LocalKrw[k][j][i + 2];
+
+            DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx1p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j][i - 1];
+            else
+              LocalRelPermgx1p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i + 1] - BetaPrime * LocalKrg[k][j][i + 2];
+          }
+          else if ((i - xs > 0 && xs != 0) || (xs + xm - i > 1 && xs + xm != mx)) {
+            Beta = 0.5 * Localh1[k][j][i - 1] / (Localx1[k][j][i - 1] - Localx1[k][j][i - 2]);
+            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i + 1] - Localx1[k][j][i]);
+
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox1m[k][j][i] = (1 + Beta) * LocalKro[k][j][i - 1] - Beta * LocalKro[k][j][i - 2];
+            else
+              LocalRelPermox1m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j][i + 1];
+
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx1m[k][j][i] = (1 + Beta) * LocalKrw[k][j][i - 1] - Beta * LocalKrw[k][j][i - 2];
+            else
+              LocalRelPermwx1m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j][i + 1];
+
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx1m[k][j][i] = (1 + Beta) * LocalKrg[k][j][i - 1] - Beta * LocalKrg[k][j][i - 2];
+            else
+              LocalRelPermgx1m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j][i + 1];
+
+            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j][i - 1]);
+            BetaPrime = 0.5 * Localh1[k][j][i + 1] / (Localx1[k][j][i + 2] - Localx1[k][j][i + 1]);
+
+            DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox1p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j][i - 1];
+            else
+              LocalRelPermox1p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i + 1] - BetaPrime * LocalKro[k][j][i + 2];
+
+            DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx1p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j][i - 1];
+            else
+              LocalRelPermwx1p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i + 1] - BetaPrime * LocalKrw[k][j][i + 2];
+
+            DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx1p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j][i - 1];
+            else
+              LocalRelPermgx1p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i + 1] - BetaPrime * LocalKrg[k][j][i + 2];
           }
           /* in the x2 direction */
-          if (j - ys == 1) {
-            LocalRelPermox2m[k][j][i] = 0.0;
-            LocalRelPermwx2m[k][j][i] = 0.0;
-            LocalRelPermgx2m[k][j][i] = 0.0;
-            if (ys + ym -j > 2) {
-              DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc
-                  * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
-              else
-                LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
+          if (j == 1 || my -j == 2){  /* if I am the point right next to the physical boundary */
+            if (j  == 1  ) {
+              LocalRelPermox2m[k][j][i] = 0.0;
+              LocalRelPermwx2m[k][j][i] = 0.0;
+              LocalRelPermgx2m[k][j][i] = 0.0;
+              if (ys+ym -j > 2)
+              {
+                DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
+                else
+                  LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
 
-              DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc
-                  * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
-              else
-                LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
+                DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
+                else
+                  LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
 
-              DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc
-                  * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
-              else
-                LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
+                DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
+                else
+                  LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
+              }
+            }
+            if (my - j == 2) {
+              LocalRelPermox2p[k][j][i] = 0.0;
+              LocalRelPermwx2p[k][j][i] = 0.0;
+              LocalRelPermgx2p[k][j][i] = 0.0;
+              if ( i - ys > 1) {
+                DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
+                else
+                  LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
+
+                DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
+                else
+                  LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
+
+                DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
+                else
+                  LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
+              }
             }
           }
-          if (ys + ym - j == 2) {
-            LocalRelPermox2p[k][j][i] = 0.0;
-            LocalRelPermwx2p[k][j][i] = 0.0;
-            LocalRelPermgx2p[k][j][i] = 0.0;
-            if (j - ys > 1 ) {
-              DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc
-                  * LocalRhoox2m[k][j][i] * (Localx3[k][j][i]
-                  - Localx3[k][j - 1][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
-              else
-                LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
-
-              DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc
-                  * LocalRhowx2m[k][j][i] * (Localx3[k][j][i]
-                  - Localx3[k][j - 1][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
-              else
-                LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
-
-              DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc
-                  * LocalRhogx2m[k][j][i] * (Localx3[k][j][i]
-                  - Localx3[k][j - 1][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
-              else
-                LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
-            }
-          }
-          if (j - ys == 2 || ys + ym - j == 3 ) {
-            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc
-                * LocalRhoox2m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k][j - 1][i]);
+          else if (j == 2 || j == my - 3 ) { /* else if I am the point next to next to a physical boundary */
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
             if (DeltaPot < 0.0)
               LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
             else
               LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
 
-            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc
-                * LocalRhowx2m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k][j - 1][i]);
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
             if (DeltaPot < 0.0)
               LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
             else
               LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
 
-            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc
-                * LocalRhogx2m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k][j - 1][i]);
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
             if (DeltaPot < 0.0)
               LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
             else
               LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
 
-            DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc
-                * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
 
-            DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc
-                * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
 
-            DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc
-                * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
           }
-          if (j - ys > 2 && ys + ym - j > 3) {
-            Beta = 0.5 * Localh2[k][j - 1][i] / (Localx2[k][j - 1][i]
-                - Localx2[k][j - 2][i]);
-            BetaPrime = 0.5 * Localh2[k][j][i] / (Localx2[k][j + 1][i]
-                - Localx2[k][j][i]);
-
-            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc
-                * LocalRhoox2m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k][j - 1][i]);
+          else if ((j == ys && ys != 0 ) || (j == ys+ym -1 && ys+ym-1 != my-1 )){ /* else if I am the first and last point next to a ghost zone */
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermox2m[k][j][i] = (1 + Beta) * LocalKro[k][j - 1][i]
-                  - Beta * LocalKro[k][j - 2][i];
+              LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
             else
-              LocalRelPermox2m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i]
-                  - BetaPrime * LocalKro[k][j + 1][i];
+              LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
 
-            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc
-                * LocalRhowx2m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k][j - 1][i]);
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermwx2m[k][j][i] = (1 + Beta) * LocalKrw[k][j - 1][i]
-                  - Beta * LocalKrw[k][j - 2][i];
+              LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
             else
-              LocalRelPermwx2m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i]
-                  - BetaPrime * LocalKrw[k][j + 1][i];
+              LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
 
-            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc
-                * LocalRhogx2m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k][j - 1][i]);
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermgx2m[k][j][i] = (1 + Beta) * LocalKrg[k][j - 1][i]
-                  - Beta * LocalKrg[k][j - 2][i];
+              LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
             else
-              LocalRelPermgx2m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i]
-                  - BetaPrime * LocalKrg[k][j + 1][i];
+              LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
 
-            Beta = 0.5 * Localh2[k][j][i] / (Localx2[k][j][i] - Localx2[k][j
-                - 1][i]);
-            BetaPrime = 0.5 * Localh2[k][j + 1][i] / (Localx2[k][j + 2][i]
-                - Localx2[k][j + 1][i]);
-
-            DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc
-                * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermox2p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta
-                  * LocalKro[k][j - 1][i];
+              LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
             else
-              LocalRelPermox2p[k][j][i] = (1 + BetaPrime)
-                  * LocalKro[k][j + 1][i] - BetaPrime * LocalKro[k][j + 2][i];
+              LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
 
-            DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc
-                * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermwx2p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta
-                  * LocalKrw[k][j - 1][i];
+              LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
             else
-              LocalRelPermwx2p[k][j][i] = (1 + BetaPrime)
-                  * LocalKrw[k][j + 1][i] - BetaPrime * LocalKrw[k][j + 2][i];
+              LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
 
-            DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc
-                * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermgx2p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta
-                  * LocalKrg[k][j - 1][i];
+              LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
             else
-              LocalRelPermgx2p[k][j][i] = (1 + BetaPrime)
-                  * LocalKrg[k][j + 1][i] - BetaPrime * LocalKrg[k][j + 2][i];
+              LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
+          }
+          else if (j - ys > 1 && ys + ym - j > 2) {
+            Beta = 0.5 * Localh1[k][j - 1][i] / (Localx1[k][j - 1][i] - Localx1[k][j - 2][i]);
+            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j + 1][i] - Localx1[k][j][i]);
+
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox2m[k][j][i] = (1 + Beta) * LocalKro[k][j - 1][i] - Beta * LocalKro[k][j - 2][i];
+            else
+              LocalRelPermox2m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j + 1][i];
+
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx2m[k][j][i] = (1 + Beta) * LocalKrw[k][j - 1][i] - Beta * LocalKrw[k][j - 2][i];
+            else
+              LocalRelPermwx2m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j + 1][i];
+
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx2m[k][j][i] = (1 + Beta) * LocalKrg[k][j - 1][i] - Beta * LocalKrg[k][j - 2][i];
+            else
+              LocalRelPermgx2m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j + 1][i];
+
+            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j - 1][i]);
+            BetaPrime = 0.5 * Localh1[k][j + 1][i] / (Localx1[k][j + 2][i] - Localx1[k][j + 1][i]);
+
+            DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox2p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j - 1][i];
+            else
+              LocalRelPermox2p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j + 1][i] - BetaPrime * LocalKro[k][j + 2][i];
+
+            DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx2p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j - 1][i];
+            else
+              LocalRelPermwx2p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j + 1][i] - BetaPrime * LocalKrw[k][j + 2][i];
+
+            DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx2p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j - 1][i];
+            else
+              LocalRelPermgx2p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j + 1][i] - BetaPrime * LocalKrg[k][j + 2][i];
+          }
+          else if ((j - ys > 0 && ys != 0) || (ys + ym - j > 1 && ys + ym != my)) {
+            Beta = 0.5 * Localh1[k][j - 1][i] / (Localx1[k][j - 1][i] - Localx1[k][j - 2][i]);
+            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j + 1][i] - Localx1[k][j][i]);
+
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox2m[k][j][i] = (1 + Beta) * LocalKro[k][j - 1][i] - Beta * LocalKro[k][j - 2][i];
+            else
+              LocalRelPermox2m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j + 1][i];
+
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx2m[k][j][i] = (1 + Beta) * LocalKrw[k][j - 1][i] - Beta * LocalKrw[k][j - 2][i];
+            else
+              LocalRelPermwx2m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j + 1][i];
+
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx2m[k][j][i] = (1 + Beta) * LocalKrg[k][j - 1][i] - Beta * LocalKrg[k][j - 2][i];
+            else
+              LocalRelPermgx2m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j + 1][i];
+
+            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j - 1][i]);
+            BetaPrime = 0.5 * Localh1[k][j + 1][i] / (Localx1[k][j + 2][i] - Localx1[k][j + 1][i]);
+
+            DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox2p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j - 1][i];
+            else
+              LocalRelPermox2p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j + 1][i] - BetaPrime * LocalKro[k][j + 2][i];
+
+            DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx2p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j - 1][i];
+            else
+              LocalRelPermwx2p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j + 1][i] - BetaPrime * LocalKrw[k][j + 2][i];
+
+            DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx2p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j - 1][i];
+            else
+              LocalRelPermgx2p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j + 1][i] - BetaPrime * LocalKrg[k][j + 2][i];
           }
           /* in the x3 direction */
-          if (k - zs == 1) {
-            LocalRelPermox3m[k][j][i] = 0.0;
-            LocalRelPermwx3m[k][j][i] = 0.0;
-            LocalRelPermgx3m[k][j][i] = 0.0;
-            if (zs + zm -k > 2) {
-              DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc
-                  * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
-              else
-                LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
+          if (k == 1 || mz -k == 2){  /* if I am the point right next to the phzsical boundary */
+            if (k  == 1  ) {
+              LocalRelPermox3m[k][j][i] = 0.0;
+              LocalRelPermwx3m[k][j][i] = 0.0;
+              LocalRelPermgx3m[k][j][i] = 0.0;
+              if (zs+zm -k > 2)
+              {
+                DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
+                else
+                  LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
 
-              DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc
-                  * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
-              else
-                LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
+                DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
+                else
+                  LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
 
-              DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc
-                  * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i]
-                  - Localx3[k][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
-              else
-                LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
+                DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
+                else
+                  LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
+              }
+            }
+            if (mz - k == 2) {
+              LocalRelPermox3p[k][j][i] = 0.0;
+              LocalRelPermwx3p[k][j][i] = 0.0;
+              LocalRelPermgx3p[k][j][i] = 0.0;
+              if ( i - zs > 1) {
+                DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
+                else
+                  LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
+
+                DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
+                else
+                  LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
+
+                DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+                if (DeltaPot < 0.0)
+                  LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
+                else
+                  LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
+              }
             }
           }
-          if (zs + zm - k == 2) {
-            LocalRelPermox3p[k][j][i] = 0.0;
-            LocalRelPermwx3p[k][j][i] = 0.0;
-            LocalRelPermgx3p[k][j][i] = 0.0;
-            if (k -zs > 1) {
-              DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc
-                  * LocalRhoox3m[k][j][i] * (Localx3[k][j][i]
-                  - Localx3[k - 1][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
-              else
-                LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
-
-              DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc
-                  * LocalRhowx3m[k][j][i] * (Localx3[k][j][i]
-                  - Localx3[k - 1][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
-              else
-                LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
-
-              DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc
-                  * LocalRhogx3m[k][j][i] * (Localx3[k][j][i]
-                  - Localx3[k - 1][j][i]);
-              if (DeltaPot < 0.0)
-                LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
-              else
-                LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
-            }
-          }
-          if (k - zs == 2 || zs + zm - k == 3 ) {
-            DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc
-                * LocalRhoox3m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
+          else if (k == 2 || k == mz - 3 ) { /* else if I am the point next to next to a phzsical boundary */
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
             else
               LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
 
-            DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc
-                * LocalRhowx3m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
             else
               LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
 
-            DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc
-                * LocalRhogx3m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
             else
               LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
 
-            DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc
-                * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
 
-            DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc
-                * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
 
-            DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc
-                * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
               LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
           }
-          if (k - zs > 2 && zs + zm - k > 3) {
-            Beta = 0.5 * Localh3[k - 1][j][i] / (Localx3[k - 1][j][i]
-                - Localx3[k - 2][j][i]);
-            BetaPrime = 0.5 * Localh3[k][j][i] / (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
-
-            DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc
-                * LocalRhoox3m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
+          else if ((k == zs && zs != 0 ) || (k == zs+zm -1 && zs+zm-1 != mz-1 )){ /* else if I am the first and last point next to a ghost zone */
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermox3m[k][j][i] = (1 + Beta) * LocalKro[k - 1][j][i]
-                  - Beta * LocalKro[k - 2][j][i];
+              LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
             else
-              LocalRelPermox3m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i]
-                  - BetaPrime * LocalKro[k + 1][j][i];
+              LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
 
-            DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc
-                * LocalRhowx3m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermwx3m[k][j][i] = (1 + Beta) * LocalKrw[k - 1][j][i]
-                  - Beta * LocalKrw[k - 2][j][i];
+              LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
             else
-              LocalRelPermwx3m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i]
-                  - BetaPrime * LocalKrw[k + 1][j][i];
+              LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
 
-            DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc
-                * LocalRhogx3m[k][j][i] * (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermgx3m[k][j][i] = (1 + Beta) * LocalKrg[k - 1][j][i]
-                  - Beta * LocalKrg[k - 2][j][i];
+              LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
             else
-              LocalRelPermgx3m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i]
-                  - BetaPrime * LocalKrg[k + 1][j][i];
+              LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
 
-            Beta = 0.5 * Localh3[k][j][i] / (Localx3[k][j][i]
-                - Localx3[k - 1][j][i]);
-            BetaPrime = 0.5 * Localh3[k + 1][j][i] / (Localx3[k + 2][j][i]
-                - Localx3[k + 1][j][i]);
-
-            DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc
-                * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermox3p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta
-                  * LocalKro[k - 1][j][i];
+              LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
             else
-              LocalRelPermox3p[k][j][i] = (1 + BetaPrime)
-                  * LocalKro[k + 1][j][i] - BetaPrime * LocalKro[k + 2][j][i];
+              LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
 
-            DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc
-                * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermwx3p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta
-                  * LocalKrw[k - 1][j][i];
+              LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
             else
-              LocalRelPermwx3p[k][j][i] = (1 + BetaPrime)
-                  * LocalKrw[k + 1][j][i] - BetaPrime * LocalKrw[k + 2][j][i];
+              LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
 
-            DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc
-                * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i]
-                - Localx3[k][j][i]);
+            DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
             if (DeltaPot < 0.0)
-              LocalRelPermgx3p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta
-                  * LocalKrg[k - 1][j][i];
+              LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
             else
-              LocalRelPermgx3p[k][j][i] = (1 + BetaPrime)
-                  * LocalKrg[k + 1][j][i] - BetaPrime * LocalKrg[k + 2][j][i];
+              LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
+          }
+          else if (k - zs > 1 && zs + zm - k > 2) {
+            Beta = 0.5 * Localh1[k - 1][j][i] / (Localx1[k - 1][j][i] - Localx1[k - 2][j][i]);
+            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k + 1][j][i] - Localx1[k][j][i]);
+
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox3m[k][j][i] = (1 + Beta) * LocalKro[k - 1][j][i] - Beta * LocalKro[k - 2][j][i];
+            else
+              LocalRelPermox3m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k + 1][j][i];
+
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx3m[k][j][i] = (1 + Beta) * LocalKrw[k - 1][j][i] - Beta * LocalKrw[k - 2][j][i];
+            else
+              LocalRelPermwx3m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k + 1][j][i];
+
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx3m[k][j][i] = (1 + Beta) * LocalKrg[k - 1][j][i] - Beta * LocalKrg[k - 2][j][i];
+            else
+              LocalRelPermgx3m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k + 1][j][i];
+
+            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k - 1][j][i]);
+            BetaPrime = 0.5 * Localh1[k + 1][j][i] / (Localx1[k + 2][j][i] - Localx1[k + 1][j][i]);
+
+            DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox3p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k - 1][j][i];
+            else
+              LocalRelPermox3p[k][j][i] = (1 + BetaPrime) * LocalKro[k + 1][j][i] - BetaPrime * LocalKro[k + 2][j][i];
+
+            DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx3p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k - 1][j][i];
+            else
+              LocalRelPermwx3p[k][j][i] = (1 + BetaPrime) * LocalKrw[k + 1][j][i] - BetaPrime * LocalKrw[k + 2][j][i];
+
+            DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx3p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k - 1][j][i];
+            else
+              LocalRelPermgx3p[k][j][i] = (1 + BetaPrime) * LocalKrg[k + 1][j][i] - BetaPrime * LocalKrg[k + 2][j][i];
+          }
+          else if ((k - zs > 0 && zs != 0) || (zs + zm - k > 1 && zs + zm != mz)) {
+            Beta = 0.5 * Localh1[k - 1][j][i] / (Localx1[k - 1][j][i] - Localx1[k - 2][j][i]);
+            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k + 1][j][i] - Localx1[k][j][i]);
+
+            DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox3m[k][j][i] = (1 + Beta) * LocalKro[k - 1][j][i] - Beta * LocalKro[k - 2][j][i];
+            else
+              LocalRelPermox3m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k + 1][j][i];
+
+            DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx3m[k][j][i] = (1 + Beta) * LocalKrw[k - 1][j][i] - Beta * LocalKrw[k - 2][j][i];
+            else
+              LocalRelPermwx3m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k + 1][j][i];
+
+            DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx3m[k][j][i] = (1 + Beta) * LocalKrg[k - 1][j][i] - Beta * LocalKrg[k - 2][j][i];
+            else
+              LocalRelPermgx3m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k + 1][j][i];
+
+            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k - 1][j][i]);
+            BetaPrime = 0.5 * Localh1[k + 1][j][i] / (Localx1[k + 2][j][i] - Localx1[k + 1][j][i]);
+
+            DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermox3p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k - 1][j][i];
+            else
+              LocalRelPermox3p[k][j][i] = (1 + BetaPrime) * LocalKro[k + 1][j][i] - BetaPrime * LocalKro[k + 2][j][i];
+
+            DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermwx3p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k - 1][j][i];
+            else
+              LocalRelPermwx3p[k][j][i] = (1 + BetaPrime) * LocalKrw[k + 1][j][i] - BetaPrime * LocalKrw[k + 2][j][i];
+
+            DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
+            if (DeltaPot < 0.0)
+              LocalRelPermgx3p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k - 1][j][i];
+            else
+              LocalRelPermgx3p[k][j][i] = (1 + BetaPrime) * LocalKrg[k + 1][j][i] - BetaPrime * LocalKrg[k + 2][j][i];
           }
         }
 
@@ -1326,17 +1551,39 @@ PetscErrorCode DefiantComputeVolumeFactorsAtFaces(BlackOilReservoirSimulation* M
   PetscScalar ***LocalBgx1p, ***LocalBgx2p, ***LocalBgx3p;
   PetscScalar ***LocalBgx1m, ***LocalBgx2m, ***LocalBgx3m;
 
+  Vec vecLocalFlowMask, vecLocalPhi;
+  Vec vecLocalBo, vecLocalBw, vecLocalBg;
+
   PetscFunctionBegin;
   /* Get dimensions and extents of the local vectors */
   ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);CHKMEMQ;
   ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);CHKMEMQ;
+
+
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPhi);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalBo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalBw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalBg);CHKERRQ(ierr);CHKMEMQ;
+
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Phi  ,INSERT_VALUES, vecLocalPhi  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Phi  ,INSERT_VALUES, vecLocalPhi  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Bo  ,INSERT_VALUES, vecLocalBo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Bo  ,INSERT_VALUES, vecLocalBo  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Bw  ,INSERT_VALUES, vecLocalBw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Bw  ,INSERT_VALUES, vecLocalBw  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Bg  ,INSERT_VALUES, vecLocalBg  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Bg  ,INSERT_VALUES, vecLocalBg  );CHKERRQ(ierr);CHKMEMQ;
+
   /* Grab the data for the flow field */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Phi, &LocalPhi);CHKERRQ(ierr);CHKMEMQ;
-  /* Grab the local data for volume factors at the cell centers */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bo, &LocalBo);CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bw, &LocalBw);CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bg, &LocalBg);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalFlowMask, &LocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalPhi, &LocalPhi);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalBo, &LocalBo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalBw, &LocalBw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalBg, &LocalBg);CHKERRQ(ierr);CHKMEMQ;
+
   /* Grab the local data for Volume factors at the faces */
   ierr = DAVecGetArray(MySim->SimDA, MySim->Box1p, &LocalBox1p);CHKERRQ(ierr);CHKMEMQ;
   ierr = DAVecGetArray(MySim->SimDA, MySim->Box2p, &LocalBox2p);CHKERRQ(ierr);CHKMEMQ;

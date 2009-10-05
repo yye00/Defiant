@@ -65,7 +65,7 @@ extern PetscErrorCode DefiantUpdatePcow(BlackOilReservoirSimulation* MySim)
         if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz
             - 1) {
         } else if (ABS(LocalFlowMask[k][j][i]-FLUID_FLOW) < EPSILON) {
-          DefiantTableXFromY(&MySim->PcowSw, &LocalPcow[k][j][i], &LocalSw[k][j][i]);
+          ierr = DefiantTableXFromY(&(MySim->PcowSw), &LocalPcow[k][j][i], &LocalSw[k][j][i]);CHKERRQ(ierr);CHKMEMQ;
         }
       }
     }

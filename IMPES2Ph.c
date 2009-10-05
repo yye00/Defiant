@@ -230,7 +230,6 @@ extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation*
   ierr = DAVecGetArray(MySim->SimDA, MySim->Tox3p, &LocalTox3p);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->Twx3m, &LocalTwx3m);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->Twx3p, &LocalTwx3p);CHKERRQ(ierr);
-
   for (k = zs; k < zs + zm; k++) {
     for (j = ys; j < ys + ym; j++) {
       for (i = xs; i < xs + xm; i++) {
@@ -283,6 +282,7 @@ extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation*
   }
   ierr = MatAssemblyBegin(MySim->A, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(MySim->A, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+
   PetscFunctionReturn(0);
 }
 
@@ -429,7 +429,10 @@ extern PetscErrorCode DefiantIMPES2PhHandleWells(BlackOilReservoirSimulation* My
   for (WellID = 0; WellID < MySim->NumberOfWells; WellID++) {
     for (PerfIDMine = 0; PerfIDMine
         < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDMine++) {
-      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE){
+      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE &&
+           (MySim->Wells[WellID].Perforations[PerfIDMine].I >= xs && MySim->Wells[WellID].Perforations[PerfIDMine].I < xs+xm &&
+            MySim->Wells[WellID].Perforations[PerfIDMine].J >= ys && MySim->Wells[WellID].Perforations[PerfIDMine].J < ys+ym &&
+            MySim->Wells[WellID].Perforations[PerfIDMine].K >= zs && MySim->Wells[WellID].Perforations[PerfIDMine].K < zs+zm) ){
         if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
           /* grab my index */
           MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
@@ -706,7 +709,10 @@ extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirS
   for (WellID = 0; WellID < MySim->NumberOfWells; WellID++) {
     for (PerfIDMine = 0; PerfIDMine
         < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDMine++) {
-      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE){
+      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE &&
+          (MySim->Wells[WellID].Perforations[PerfIDMine].I >= xs && MySim->Wells[WellID].Perforations[PerfIDMine].I < xs+xm &&
+           MySim->Wells[WellID].Perforations[PerfIDMine].J >= ys && MySim->Wells[WellID].Perforations[PerfIDMine].J < ys+ym &&
+           MySim->Wells[WellID].Perforations[PerfIDMine].K >= zs && MySim->Wells[WellID].Perforations[PerfIDMine].K < zs+zm)){
         if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
           /* grab my index */
           MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
@@ -926,6 +932,7 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   ierr = VecAssemblyBegin(TempDSDT);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(TempDSDT);CHKERRQ(ierr);
   ierr = VecMax(TempDSDT, &TempInt, &MySim->DSDTmax);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "\nMaximum DSDTmax is:%f \n", MySim->DSDTmax);CHKERRQ(ierr);
   /* Compute the desired Delta T and set it to the simulation DeltaT */
   MySim->DeltaTS = MySim->DSmax/MySim->DSDTmax;
   if (ABS(MySim->DSmax) < EPSILON) MySim->DeltaTS = MySim->DeltaTP;
@@ -949,6 +956,8 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
                -  LocalTwx3p[k][j][i]*MySim->GravAcc*LocalRhowx3p[k][j][i]*(Localx3[k+1][j][i]-Localx3[k][j][i])
                +  LocalTwx3m[k][j][i]*MySim->GravAcc*LocalRhowx3m[k][j][i]*(Localx3[k][j][i]-Localx3[k-1][j][i])
                +  LocalQw[k][j][i] );
+          if (LocalSw[k][j][i] < MySim->Swc) LocalSw[k][j][i] = MySim->Swc;
+          else if (LocalSw[k][j][i] > 1.0 - MySim->Sor) LocalSw[k][j][i] = 1.0 - MySim->Sor;
           LocalSo[k][j][i] = 1.0 - LocalSw[k][j][i];
         }
       }
@@ -970,10 +979,321 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   PetscFunctionReturn(0);
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "DefiantClearMatrixRHS"
+PetscErrorCode DefiantClearMatrixRHS(BlackOilReservoirSimulation* MySim)
+{
+  PetscErrorCode ierr;
+  ierr = VecZeroEntries(MySim->RHS);CHKERRQ(ierr);CHKMEMQ;
+  ierr = MatZeroEntries(MySim->A);CHKERRQ(ierr);CHKMEMQ;
+  return 0;
+}
 
 #undef __FUNCT__
-#define __FUNCT__ "DefiantIMPES2PhSolveDMMG"
-extern PetscErrorCode DefiantIMPES2PhSolveDMMG(BlackOilReservoirSimulation* MySim)
+#define __FUNCT__ "DefiantIMPES2PhSolve"
+extern PetscErrorCode DefiantIMPES2PhSolve(BlackOilReservoirSimulation* MySim)
+{
+  PetscErrorCode ierr;
+  PetscReal norm;
+  Vec TempVec;
+
+  PetscFunctionBegin;
+
+  /* Set the current simulation to MySIM */
+  CurrentSimulation = MySim;
+  /* duplicate Temp with X */
+  ierr = VecDuplicate(MySim->Po, &TempVec);CHKERRQ(ierr);CHKMEMQ;
+  /* Set the KSP */
+  ierr = KSPSetOperators(MySim->ksp, MySim->A, MySim->A, DIFFERENT_NONZERO_PATTERN);
+  ierr = KSPGetPC(MySim->ksp,&MySim->pc);CHKERRQ(ierr);
+  ierr = PCSetType(MySim->pc,PCJACOBI);CHKERRQ(ierr);
+  ierr = KSPSetTolerances(MySim->ksp,1.e-7,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+  ierr = KSPSetFromOptions(MySim->ksp);CHKERRQ(ierr);
+  ierr = KSPSolve(MySim->ksp,MySim->RHS,MySim->Po);CHKERRQ(ierr);
+  /* solver info */
+  //ierr = KSPView(MySim->ksp,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  /* residual info */
+  ierr = MatMult(MySim->A, MySim->Po, TempVec);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecAXPY(TempVec, -1.0, MySim->RHS);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecNorm(TempVec, NORM_2, &norm);CHKERRQ(ierr);CHKMEMQ;
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Residual norm %G\n", norm);CHKERRQ(ierr);CHKMEMQ;
+
+  PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhIterate"
+extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+
+  /* Now we start */
+  MySim->CurrentTimeP = MySim->StartTime;
+  MySim->CurrentTimeS = MySim->StartTime;
+
+  /* compute some geometric and static factors*/
+  ierr = DefiantComputeKAByHAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+  /* update the relative permeability and capillary pressure, saturation based dependent variables */
+  ierr = DefiantUpdateRelativePermeability(MySim);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DefiantUpdatePcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+  while(MySim->CurrentTimeP < MySim->EndTime)
+  {
+    /* we already have the values at cell faces, we interpolate at faces */
+    ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output AKHX1m is: ");
+    ierr = VecView(MySim->AKHx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output AKHX1p is: ");
+    ierr = VecView(MySim->AKHx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermox1m is: ");
+    ierr = VecView(MySim->RelPermox1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermox1p is: ");
+    ierr = VecView(MySim->RelPermox1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermwx1m is: ");
+    ierr = VecView(MySim->RelPermwx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermwx1p is: ");
+    ierr = VecView(MySim->RelPermwx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* we have everything at the faces so we compute transmissbility */
+    ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* IMPES 2Ph functions */
+    ierr = Defiant2PhGravity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = Defiant2PhCapillaryPressure(MySim);CHKERRQ(ierr);CHKMEMQ;
+    /* we clear the values in the matrix and RHS before we assemble */
+    ierr = DefiantClearMatrixRHS(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantIMPES2PhAssembleMatrix(MySim);CHKERRQ(ierr);CHKMEMQ;
+    /* assemble RHS */
+    ierr = DefiantIMPES2PhAssembleRHS(MySim);CHKERRQ(ierr);CHKMEMQ;
+    /* handling the wells is done AFTER we have the matrix and the RHS */
+    ierr = DefiantIMPES2PhHandleWells(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Qo is: ");
+    ierr = VecView(MySim->Qo,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Qw is: ");
+    ierr = VecView(MySim->Qw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    /* Diagnostic output */
+    ierr = MatView(MySim->A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = VecView(MySim->RHS,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    /* we now are ready to solve */
+    ierr = DefiantIMPES2PhSolve(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output pressure is: ");
+    ierr = VecView(MySim->Po,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    /* With the new pressure, we update sats then capillary pressures then pressures
+     * Then update relative perms, porosity, density, volume factors and viscosities */
+    /* update pressure dependent properties */
+    ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* interpolate pressure dependent properties */
+    ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* Now w eare ready to update the saturations using improved IMPES */
+    while(MySim->CurrentTimeS < MySim->CurrentTimeP + MySim->DeltaTP)
+    {
+      ierr = DefiantIMPES2PhUpdateSaturations(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* update saturation based properties */
+      ierr = DefiantUpdateRelativePermeability(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdatePcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* update pw now that we have a new pcow */
+      ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* with new pcow we have new pw, so new properties */
+      ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* update those new properties at the faces with interpolation */
+      ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+      /* Transmissibility calculation routines */
+      ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+      /* Finally update the well information */
+      ierr = DefiantIMPES2PhHandleWellsForSaturation(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+      /*
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Output saturations is: ");
+      ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Pcow is: ");
+      ierr = VecView(MySim->Pcow,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Pw is: ");
+      ierr = VecView(MySim->Pw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Krw is: ");
+      ierr = VecView(MySim->Krw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1p is: ");
+      ierr = VecView(MySim->RelPermwx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1m is: ");
+      ierr = VecView(MySim->RelPermwx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox1p is: ");
+      ierr = VecView(MySim->RelPermox1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox1m is: ");
+      ierr = VecView(MySim->RelPermox1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ; */
+
+      MySim->CurrentTimeS = MySim->CurrentTimeS + MySim->DeltaTS;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current DeltaTS is: %f ", MySim->DeltaTS);
+      ierr = DefiantViewSaturationsASCII(MySim);CHKERRQ(ierr);CHKMEMQ;
+    }
+
+    MySim->CurrentTimeP = MySim->CurrentTimeP + MySim->DeltaTP;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current time is: %f ", MySim->CurrentTimeP);
+    if (MySim->CurrentTimeP == 1500){
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"FINAL FINAL Output saturations is: ");
+      ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      break;
+    }
+  }
+
+  PetscFunctionReturn(0);
+}
+
+
+/**********************************************
+ *
+ * MultiGrid Functions go here
+ *
+ *********************************************/
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhDMMGComputeRHS"
+extern PetscErrorCode DefiantIMPES2PhDMMGComputeRHS(DMMG dmmg, Vec b);
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhDMMGComputeRHS"
+extern PetscErrorCode DefiantIMPES2PhDMMGComputeMatrix(DMMG dmmg, Mat jac, Mat B);
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhDMMGSolve"
+extern PetscErrorCode DefiantIMPES2PhDMMGSolve(BlackOilReservoirSimulation* MySim);
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhDMMGIterate"
+extern PetscErrorCode DefiantIMPES2PhDMMGIterate(BlackOilReservoirSimulation* MySim)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+
+  /* Now we start */
+  MySim->CurrentTimeP = MySim->StartTime;
+  MySim->CurrentTimeS = MySim->StartTime;
+
+  /* compute some geometric and static factors*/
+  ierr = DefiantComputeKAByHAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+  /* update the relative permeability and capillary pressure, saturation based dependent variables */
+  ierr = DefiantUpdateRelativePermeability(MySim);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DefiantUpdatePcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+  while(MySim->CurrentTimeP < MySim->EndTime)
+  {
+    /* we already have the values at cell faces, we interpolate at faces */
+    ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* we have everything at the faces so we compute transmissbility */
+    ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* IMPES 2Ph functions */
+    ierr = Defiant2PhGravity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = Defiant2PhCapillaryPressure(MySim);CHKERRQ(ierr);CHKMEMQ;
+    /* we clear the values in the matrix and RHS before we assemble */
+    ierr = DefiantClearMatrixRHS(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* we now are ready to solve with DMMG*/
+    ierr = DefiantIMPES2PhDMMGSolve(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output pressure is: ");
+    ierr = VecView(MySim->Po,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    /* With the new pressure, we update sats then capillary pressures then pressures
+     * Then update relative perms, porosity, density, volume factors and viscosities */
+    /* update pressure dependent properties */
+    ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* interpolate pressure dependent properties */
+    ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+    /* Now w eare ready to update the saturations using improved IMPES */
+    while(MySim->CurrentTimeS < MySim->CurrentTimeP + MySim->DeltaTP)
+    {
+      ierr = DefiantIMPES2PhUpdateSaturations(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* update saturation based properties */
+      ierr = DefiantUpdateRelativePermeability(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdatePcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* update pw now that we have a new pcow */
+      ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* with new pcow we have new pw, so new properties */
+      ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
+      /* update those new properties at the faces with interpolation */
+      ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+      /* Transmissibility calculation routines */
+      ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+      /* Finally update the well information */
+      ierr = DefiantIMPES2PhHandleWellsForSaturation(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Output saturations is: ");
+      ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Pcow is: ");
+      ierr = VecView(MySim->Pcow,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Pw is: ");
+      ierr = VecView(MySim->Pw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Krw is: ");
+      ierr = VecView(MySim->Krw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1p is: ");
+      ierr = VecView(MySim->RelPermwx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1m is: ");
+      ierr = VecView(MySim->RelPermwx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Transmissibility Twx1p is: ");
+      ierr = VecView(MySim->Twx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Transmissibility Twx1m is: ");
+      ierr = VecView(MySim->Twx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+      MySim->CurrentTimeS = MySim->CurrentTimeS + MySim->DeltaTS;
+      ierr = DefiantViewSaturationsASCII(MySim);CHKERRQ(ierr);CHKMEMQ;
+      break;
+    }
+
+    MySim->CurrentTimeP = MySim->CurrentTimeP + MySim->DeltaTP;
+    break;
+  }
+
+  PetscFunctionReturn(0);
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhDMMGSolve"
+extern PetscErrorCode DefiantIMPES2PhDMMGSolve(BlackOilReservoirSimulation* MySim)
 {
   PetscErrorCode ierr;
   PetscReal norm;
@@ -1097,168 +1417,3 @@ PetscErrorCode DefiantIMPES2PhDMMGComputeMatrix(DMMG dmmg, Mat jac, Mat B)
 
   PetscFunctionReturn(0);
 }
-
-#undef __FUNCT__
-#define __FUNCT__ "DefiantIMPES2PhSolve"
-extern PetscErrorCode DefiantIMPES2PhSolve(BlackOilReservoirSimulation* MySim)
-{
-  PetscErrorCode ierr;
-  PetscReal norm;
-  Vec TempVec;
-
-  PetscFunctionBegin;
-
-  /* Set the current simulation to MySIM */
-  CurrentSimulation = MySim;
-  /* duplicate Temp with X */
-  ierr = VecDuplicate(MySim->Po, &TempVec);CHKERRQ(ierr);CHKMEMQ;
-  /* Set the KSP */
-  ierr = KSPSetOperators(MySim->ksp, MySim->A, MySim->A, DIFFERENT_NONZERO_PATTERN);
-  ierr = KSPGetPC(MySim->ksp,&MySim->pc);CHKERRQ(ierr);
-  ierr = PCSetType(MySim->pc,PCJACOBI);CHKERRQ(ierr);
-  ierr = KSPSetTolerances(MySim->ksp,1.e-7,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(MySim->ksp);CHKERRQ(ierr);
-  ierr = KSPSolve(MySim->ksp,MySim->RHS,MySim->Po);CHKERRQ(ierr);
-  /* solver info */
-  //ierr = KSPView(MySim->ksp,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  /* residual info */
-  ierr = MatMult(MySim->A, MySim->Po, TempVec);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecAXPY(TempVec, -1.0, MySim->RHS);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecNorm(TempVec, NORM_2, &norm);CHKERRQ(ierr);CHKMEMQ;
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Residual norm %G\n", norm);CHKERRQ(ierr);CHKMEMQ;
-
-  PetscFunctionReturn(0);
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "DefiantClearMatrixRHS"
-PetscErrorCode DefiantClearMatrixRHS(BlackOilReservoirSimulation* MySim)
-{
-  PetscErrorCode ierr;
-  ierr = VecZeroEntries(MySim->RHS);CHKERRQ(ierr);CHKMEMQ;
-  ierr = MatZeroEntries(MySim->A);CHKERRQ(ierr);CHKMEMQ;
-  return 0;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "DefiantIMPES2PhIterate"
-extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
-{
-  PetscErrorCode ierr;
-  PetscFunctionBegin;
-
-  /* Now we start */
-  MySim->CurrentTimeP = MySim->StartTime;
-  MySim->CurrentTimeS = MySim->StartTime;
-
-  /* compute some geometric and static factors*/
-  ierr = DefiantComputeKAByHAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-  /* update the relative permeability and capillary pressure, saturation based dependent variables */
-  ierr = DefiantUpdateRelativePermeability(MySim);CHKERRQ(ierr);CHKMEMQ;
-  ierr = DefiantUpdatePcow(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-  while(MySim->CurrentTimeP < MySim->EndTime)
-  {
-    /* we already have the values at cell faces, we interpolate at faces */
-    ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-    /* we have everything at the faces so we compute transmissbility */
-    ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-    /* IMPES 2Ph functions */
-    ierr = Defiant2PhGravity(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = Defiant2PhCapillaryPressure(MySim);CHKERRQ(ierr);CHKMEMQ;
-    /* we clear the values in the matrix and RHS before we assemble */
-    ierr = DefiantClearMatrixRHS(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantIMPES2PhAssembleMatrix(MySim);CHKERRQ(ierr);CHKMEMQ;
-    /* assemble RHS */
-    ierr = DefiantIMPES2PhAssembleRHS(MySim);CHKERRQ(ierr);CHKMEMQ;
-    /* handling the wells is done AFTER we have the matrix and the RHS */
-    ierr = DefiantIMPES2PhHandleWells(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Qo is: ");
-    ierr = VecView(MySim->Qo,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Qw is: ");
-    ierr = VecView(MySim->Qw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-    /* Diagnostic output */
-    ierr = MatView(MySim->A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = VecView(MySim->RHS,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-    /* we now are ready to solve */
-    ierr = DefiantIMPES2PhSolve(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output pressure is: ");
-    ierr = VecView(MySim->Po,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-    /* With the new pressure, we update sats then capillary pressures then pressures
-     * Then update relative perms, porosity, density, volume factors and viscosities */
-    /* update pressure dependent properties */
-    ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-    /* interpolate pressure dependent properties */
-    ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-    /* Now w eare ready to update the saturations using improved IMPES */
-    while(MySim->CurrentTimeS < MySim->CurrentTimeP + MySim->DeltaTP)
-    {
-      ierr = DefiantIMPES2PhUpdateSaturations(MySim);CHKERRQ(ierr);CHKMEMQ;
-      /* update saturation based properties */
-      ierr = DefiantUpdateRelativePermeability(MySim);CHKERRQ(ierr);CHKMEMQ;
-      ierr = DefiantUpdatePcow(MySim);CHKERRQ(ierr);CHKMEMQ;
-      /* update pw now that we have a new pcow */
-      ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
-      /* with new pcow we have new pw, so new properties */
-      ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
-      ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
-      ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
-      ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
-      /* update those new properties at the faces with interpolation */
-      ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-      ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-      ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-      /* Transmissibility calculation routines */
-      ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-      /* Finally update the well information */
-      ierr = DefiantIMPES2PhHandleWellsForSaturation(MySim);CHKERRQ(ierr);CHKMEMQ;
-
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Output saturations is: ");
-      ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Pcow is: ");
-      ierr = VecView(MySim->Pcow,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Pw is: ");
-      ierr = VecView(MySim->Pw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Krw is: ");
-      ierr = VecView(MySim->Krw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1p is: ");
-      ierr = VecView(MySim->RelPermwx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1m is: ");
-      ierr = VecView(MySim->RelPermwx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Transmissibility Twx1p is: ");
-      ierr = VecView(MySim->Twx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Transmissibility Twx1m is: ");
-      ierr = VecView(MySim->Twx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
-      MySim->CurrentTimeS = MySim->CurrentTimeS + MySim->DeltaTS;
-      ierr = DefiantViewSaturationsASCII(MySim);CHKERRQ(ierr);CHKMEMQ;
-    }
-
-    MySim->CurrentTimeP = MySim->CurrentTimeP + MySim->DeltaTP;
-  }
-
-  PetscFunctionReturn(0);
-}
-

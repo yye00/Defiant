@@ -8,7 +8,7 @@
 #include "Defiant.h"
 
 #undef __FUNCT__
-#define __FUNCT__ "DefiantIMPES2PhCreateSimulation"
+#define __FUNCT__ "DefiantCreateSimulationVecs"
 PetscErrorCode DefiantCreateSimulationVecs(BlackOilReservoirSimulation* MySim) {
 
   PetscErrorCode ierr;

@@ -308,49 +308,54 @@ extern PetscErrorCode DefiantComputeTransmissibilities(BlackOilReservoirSimulati
 extern PetscErrorCode DefiantPhGravity(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantPhCapillaryPressure(BlackOilReservoirSimulation* MySim);
 /* IMPES 2Ph functions */
+extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES2PhAssembleRHS(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantIMPES2PhHandleWells(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhAssembleRHS(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhSolve(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantClearMatrixRHS(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES2PhSolve(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim);
+/* 2Ph DMMG functions */
 extern PetscErrorCode DefiantIMPES2PhDMMGComputeRHS(DMMG dmmg, Vec b);
 extern PetscErrorCode DefiantIMPES2PhDMMGComputeMatrix(DMMG dmmg, Mat jac, Mat B);
-extern PetscErrorCode DefiantIMPES2PhSolveDMMG(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES2PhDMMGSolve(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES2PhDMMGIterate(BlackOilReservoirSimulation* MySim);
 
 /* NewtonRaphson 2Ph functions */
 extern PetscErrorCode DefiantNewtonRaphson2PhGravity(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson2PhCapillaryPressure(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson2PhHandleWells(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantNewtonRaphson2PhAssembleMatrix(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantNewtonRaphson2PhAssembleRHS(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantNewtonRaphson2PhFormFunction(SNES snes,Vec X,Vec F,void *ptr);
 extern PetscErrorCode DefiantNewtonRaphson2PhSolve(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantNewtonRaphson2PhComputeLegacyTerms(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson2PhIterate(BlackOilReservoirSimulation* MySim);
 
 /* IMPES 3Ph functions */
 extern PetscErrorCode DefiantIMPES3PhGravity(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhCapillaryPressure(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhHandleWells(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhAssembleRHS(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhSolve(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantIMPES2PhDMMGComputeRHS(DMMG dmmg, Vec b);
-extern PetscErrorCode DefiantIMPES2PhDMMGComputeMatrix(DMMG dmmg, Mat jac, Mat B);
-extern PetscErrorCode DefiantIMPES2PhSolveDMMG(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantNewtonRaphson3PhCapillaryPressure(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhCapillaryPressure(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhUpdateSaturations(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhHandleWells(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhHandleWellsForSaturation(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhAssembleMatrix(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhAssembleRHS(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhSolve(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhUpdateSaturations(BlackOilReservoirSimulation* MySim);
+
+extern PetscErrorCode DefiantIMPES3PhDMMGHandleWells(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhDMMGComputeRHS(DMMG dmmg, Vec b);
+extern PetscErrorCode DefiantIMPES3PhDMMGComputeMatrix(DMMG dmmg, Mat jac, Mat B);
+extern PetscErrorCode DefiantIMPES3PhDMMGSolve(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantIMPES3PhDMMGIterate(BlackOilReservoirSimulation* MySim);
 
 /* NewtonRaphson 3Ph functions */
 extern PetscErrorCode DefiantNewtonRaphson3PhGravity(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantNewtonRaphson3PhCapillaryPressure(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson3PhHandleWells(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson3PhFormFunction(SNES snes,Vec X,Vec F,void *ptr);
 extern PetscErrorCode DefiantNewtonRaphson3PhSolve(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantNewtonRaphsonComputeLegacyTerms(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantNewtonRaphson3PhComputeLegacyTerms(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson3PhIterate(BlackOilReservoirSimulation* MySim);
 
 

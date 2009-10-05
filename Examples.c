@@ -24,31 +24,31 @@ extern PetscErrorCode DefiantIMPES2PhBuckleyLeverett()
   ierr = VecSet(BuckleyLeverett.FlowMask, FLUID_FLOW);CHKERRQ(ierr);CHKMEMQ;
 
   /* Set the coordinates */
-  ierr = DASetUniformCoordinates(BuckleyLeverett.SimDA, 0.0, 90.0, 0.0, 3.0, 0.0, 3.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DASetUniformCoordinates(BuckleyLeverett.SimDA, -100.0, 1100.0, 0.0, 300.0, 0.0, 300.0);CHKERRQ(ierr);CHKMEMQ;
   ierr = DefiantGetDACoords(&BuckleyLeverett);CHKERRQ(ierr);CHKMEMQ;
   /* set some geometry */
-  ierr = VecSet(BuckleyLeverett.A1, 1.0);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.A2, 1.0);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.A3, 1.0);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.h1, 10.0);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.h2, 1.0);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.h3, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.A1, 10000.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.A2, 10000.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.A3, 10000.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.h1, 100.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.h2, 100.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.h3, 100.0);CHKERRQ(ierr);CHKMEMQ;
   /* set initial values to vectors */
   ierr = VecSet(BuckleyLeverett.Po, 4000.0);CHKERRQ(ierr);CHKMEMQ;
   /* set residual oil and connate water */
-  BuckleyLeverett.Sor = 0.2;
-  BuckleyLeverett.Swc = 0.2;
+  BuckleyLeverett.Sor = 0.0;
+  BuckleyLeverett.Swc = 0.0;
   /* Set saturations */
-  ierr = VecSet(BuckleyLeverett.So, 1.0-BuckleyLeverett.Swc );CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.Sw,     BuckleyLeverett.Swc );CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.So, 1.0-0.16 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.Sw, 0.16 );CHKERRQ(ierr);CHKMEMQ;
   /* Set densities */
   BuckleyLeverett.Rhoos = 1.0;
   BuckleyLeverett.Rhows = 1.0;
   ierr = VecSet(BuckleyLeverett.Rhoo, BuckleyLeverett.Rhoos );CHKERRQ(ierr);CHKMEMQ;
   ierr = VecSet(BuckleyLeverett.Rhow, BuckleyLeverett.Rhows );CHKERRQ(ierr);CHKMEMQ;
   /* Set viscosities */
-  ierr = VecSet(BuckleyLeverett.Muo, 0.00001);CHKERRQ(ierr);CHKMEMQ;
-  ierr = VecSet(BuckleyLeverett.Muw, 0.00001);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.Muo, 1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(BuckleyLeverett.Muw, 1);CHKERRQ(ierr);CHKMEMQ;
   /* Set permeabilities */
   ierr = VecSet(BuckleyLeverett.K11, 300.0);CHKERRQ(ierr);CHKMEMQ;
   ierr = VecSet(BuckleyLeverett.K22, 300.0);CHKERRQ(ierr);CHKMEMQ;
@@ -58,22 +58,22 @@ extern PetscErrorCode DefiantIMPES2PhBuckleyLeverett()
   ierr = VecSet(BuckleyLeverett.Krw, 1.0);CHKERRQ(ierr);CHKMEMQ;
   /* Set the table for PcowSw */
   BuckleyLeverett.PcowSw.NumberOfEntries = 2;
-  ierr = PetscMalloc(BuckleyLeverett.PcowSw.NumberOfEntries*sizeof(PetscScalar),&BuckleyLeverett.PcowSw.X);
-  ierr = PetscMalloc(BuckleyLeverett.PcowSw.NumberOfEntries*sizeof(PetscScalar),&BuckleyLeverett.PcowSw.Y);
+  ierr = PetscMalloc(BuckleyLeverett.PcowSw.NumberOfEntries*sizeof(PetscScalar),&BuckleyLeverett.PcowSw.X);CHKERRQ(ierr);CHKMEMQ;
+  ierr = PetscMalloc(BuckleyLeverett.PcowSw.NumberOfEntries*sizeof(PetscScalar),&BuckleyLeverett.PcowSw.Y);CHKERRQ(ierr);CHKMEMQ;
   BuckleyLeverett.PcowSw.X[0] = 0;BuckleyLeverett.PcowSw.X[1] = 0;
   BuckleyLeverett.PcowSw.Y[0] = 0;BuckleyLeverett.PcowSw.Y[1] = 1;
   /* Set the graviational acceleration */
   BuckleyLeverett.GravAcc = 32.2;
   /* Set the rock properties */
   ierr = VecSet(BuckleyLeverett.Phi, 0.2);CHKERRQ(ierr);CHKMEMQ;
-  BuckleyLeverett.RockCompressibility = 1.0e-5;
+  BuckleyLeverett.RockCompressibility = 1.0e-15;
   BuckleyLeverett.RockCompRefPressure = 14.7;
   BuckleyLeverett.RockCompRefPorosity = 0.3;
   /* Set the Times */
   BuckleyLeverett.StartTime = 0.0;
-  BuckleyLeverett.EndTime = 0.3;
+  BuckleyLeverett.EndTime = 1500;
   BuckleyLeverett.DeltaTP = 0.1;
-  BuckleyLeverett.DeltaTS = 0.01;
+  BuckleyLeverett.DeltaTS = 0.1;
   BuckleyLeverett.DSmax = 0.01;
   /* Set the fluid compressibilities */
   BuckleyLeverett.OilCompressibility = 1.0e-5;
@@ -96,22 +96,21 @@ extern PetscErrorCode DefiantIMPES2PhBuckleyLeverett()
   BuckleyLeverett.Wells[0].Perforations[0].I = 1;
   BuckleyLeverett.Wells[0].Perforations[0].J = 1;
   BuckleyLeverett.Wells[0].Perforations[0].K = 1;
-  BuckleyLeverett.Wells[0].Perforations[0].Qw = 3.1e11;
+  BuckleyLeverett.Wells[0].Perforations[0].Qw = 4.0e7;
   BuckleyLeverett.Wells[0].Perforations[0].Constraint = FLOW_RATE_CONSTRAINT;
   BuckleyLeverett.Wells[0].Perforations[0].WellType = WATER_INJECTOR;
   BuckleyLeverett.Wells[0].Perforations[0].IsActive = PETSC_TRUE;
   BuckleyLeverett.Wells[0].Perforations[0].Orientation = PERF_ORIENTATION_X3X3;
   BuckleyLeverett.Wells[0].Perforations[0].Rw = 0.3;
-  BuckleyLeverett.Wells[0].Perforations[0].S = 0.25;
+  BuckleyLeverett.Wells[0].Perforations[0].S = 0.0;
   BuckleyLeverett.Wells[0].Perforations[0].zbh = 0.0;
 
   /* Set information for well zero,the producer */
-  BuckleyLeverett.Wells[1].Perforations[0].I = 8;
+  BuckleyLeverett.Wells[1].Perforations[0].I = 9;
   BuckleyLeverett.Wells[1].Perforations[0].J = 1;
   BuckleyLeverett.Wells[1].Perforations[0].K = 1;
-  BuckleyLeverett.Wells[1].Perforations[0].BHPw = 3000;
-  BuckleyLeverett.Wells[1].Perforations[0].BHPo = 3000;
-  BuckleyLeverett.Wells[1].Perforations[0].Constraint = BHP_CONSTRAINT;
+  BuckleyLeverett.Wells[0].Perforations[0].Qo = 4.0e7;
+  BuckleyLeverett.Wells[1].Perforations[0].Constraint = FLOW_RATE_CONSTRAINT;
   BuckleyLeverett.Wells[1].Perforations[0].IsActive = PETSC_TRUE;
   BuckleyLeverett.Wells[1].Perforations[0].Orientation = PERF_ORIENTATION_X3X3;
   BuckleyLeverett.Wells[1].Perforations[0].Rw = 0.3;
