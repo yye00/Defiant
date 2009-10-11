@@ -116,10 +116,7 @@ PetscErrorCode ComputeMatrix(DMMG dmmg, Mat jac, Mat B) {
 PetscErrorCode TestIterate() {
   PetscErrorCode ierr;
   PetscInt i, j, k, mx, my, mz, xm, ym, zm, xs, ys, zs, rank;
-  PetscInt BlockSize;
   PetscScalar ***array;
-  PetscScalar *array2;
-  Vec Coords;
   Vec Pooo;
   Vec Mooo;
   DA da;

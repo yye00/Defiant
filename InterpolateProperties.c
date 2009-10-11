@@ -713,38 +713,38 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
   ierr = DAGetLocalVector(MySim->SimDA, &vecLocalKrw);CHKERRQ(ierr);CHKMEMQ;
   ierr = DAGetLocalVector(MySim->SimDA, &vecLocalKrg);CHKERRQ(ierr);CHKMEMQ;
 
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> FlowMask  ,INSERT_VALUES, vecLocalFlowMask  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h1  ,INSERT_VALUES, vecLocalh1  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h1  ,INSERT_VALUES, vecLocalh1  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h2  ,INSERT_VALUES, vecLocalh2  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h2  ,INSERT_VALUES, vecLocalh2  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> h3  ,INSERT_VALUES, vecLocalh3  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> h3  ,INSERT_VALUES, vecLocalh3  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> x1  ,INSERT_VALUES, vecLocalx1  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> x1  ,INSERT_VALUES, vecLocalx1  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> x2  ,INSERT_VALUES, vecLocalx2  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> x2  ,INSERT_VALUES, vecLocalx2  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> x3  ,INSERT_VALUES, vecLocalx3  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> x3  ,INSERT_VALUES, vecLocalx3  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Po  ,INSERT_VALUES, vecLocalPo  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Po  ,INSERT_VALUES, vecLocalPo  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Pw  ,INSERT_VALUES, vecLocalPw  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Pw  ,INSERT_VALUES, vecLocalPw  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Pg  ,INSERT_VALUES, vecLocalPg  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Pg  ,INSERT_VALUES, vecLocalPg  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhoo  ,INSERT_VALUES, vecLocalRhoo  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhoo  ,INSERT_VALUES, vecLocalRhoo  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhow  ,INSERT_VALUES, vecLocalRhow  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhow  ,INSERT_VALUES, vecLocalRhow  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Rhog  ,INSERT_VALUES, vecLocalRhog  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Rhog  ,INSERT_VALUES, vecLocalRhog  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Kro  ,INSERT_VALUES, vecLocalKro  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Kro  ,INSERT_VALUES, vecLocalKro  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Krw  ,INSERT_VALUES, vecLocalKrw  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Krw  ,INSERT_VALUES, vecLocalKrw  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalBegin(MySim->SimDA, MySim-> Krg  ,INSERT_VALUES, vecLocalKrg  );CHKERRQ(ierr);CHKMEMQ;
-  ierr = DAGlobalToLocalEnd(MySim->SimDA, MySim-> Krg  ,INSERT_VALUES, vecLocalKrg  );CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->FlowMask,INSERT_VALUES,vecLocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->FlowMask,INSERT_VALUES,vecLocalFlowMask);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->h1,INSERT_VALUES,vecLocalh1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->h1,INSERT_VALUES,vecLocalh1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->h2,INSERT_VALUES,vecLocalh2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->h2,INSERT_VALUES,vecLocalh2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->h3,INSERT_VALUES,vecLocalh3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->h3,INSERT_VALUES,vecLocalh3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->x1,INSERT_VALUES,vecLocalx1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->x1,INSERT_VALUES,vecLocalx1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->x2,INSERT_VALUES,vecLocalx2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->x2,INSERT_VALUES,vecLocalx2);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->x3,INSERT_VALUES,vecLocalx3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->x3,INSERT_VALUES,vecLocalx3);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Po,INSERT_VALUES,vecLocalPo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Po,INSERT_VALUES,vecLocalPo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Pw,INSERT_VALUES,vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Pw,INSERT_VALUES,vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Pg,INSERT_VALUES,vecLocalPg);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Pg,INSERT_VALUES,vecLocalPg);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Rhoo,INSERT_VALUES,vecLocalRhoo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Rhoo,INSERT_VALUES,vecLocalRhoo);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Rhow,INSERT_VALUES,vecLocalRhow);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Rhow,INSERT_VALUES,vecLocalRhow);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Rhog,INSERT_VALUES,vecLocalRhog);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Rhog,INSERT_VALUES,vecLocalRhog);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Kro,INSERT_VALUES,vecLocalKro);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Kro,INSERT_VALUES,vecLocalKro);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Krw,INSERT_VALUES,vecLocalKrw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Krw,INSERT_VALUES,vecLocalKrw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Krg,INSERT_VALUES,vecLocalKrg);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Krg,INSERT_VALUES,vecLocalKrg);CHKERRQ(ierr);CHKMEMQ;
 
   /* Grab the data for the flow field */
   ierr = DAVecGetArray(MySim->SimDA, vecLocalFlowMask, &LocalFlowMask);CHKERRQ(ierr);
@@ -807,8 +807,7 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
   for (k = zs; k < zs + zm; k++) {
     for (j = ys; j < ys + ym; j++) {
       for (i = xs; i < xs + xm; i++) {
-        if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz
-            - 1) {
+        if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz  - 1) {
         } else if (ABS(LocalFlowMask[k][j][i]-FLUID_FLOW) < EPSILON) {
           /* in the x1 direction */
           if (i == 1 || mx -i == 2){  /* if I am the point right next to the physical boundary */
@@ -1053,7 +1052,7 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
               LocalRelPermox2p[k][j][i] = 0.0;
               LocalRelPermwx2p[k][j][i] = 0.0;
               LocalRelPermgx2p[k][j][i] = 0.0;
-              if ( i - ys > 1) {
+              if ( j - ys > 1) {
                 DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
                 if (DeltaPot < 0.0)
                   LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
@@ -1265,7 +1264,7 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
               LocalRelPermox3p[k][j][i] = 0.0;
               LocalRelPermwx3p[k][j][i] = 0.0;
               LocalRelPermgx3p[k][j][i] = 0.0;
-              if ( i - zs > 1) {
+              if ( k - zs > 1) {
                 DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
                 if (DeltaPot < 0.0)
                   LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];

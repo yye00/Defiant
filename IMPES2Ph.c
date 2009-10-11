@@ -312,58 +312,22 @@ extern PetscErrorCode DefiantIMPES2PhHandleWells(BlackOilReservoirSimulation* My
 {
   PetscErrorCode ierr;
   PetscInt mx, my, mz, xm, ym, zm, xs, ys, zs;
-  PetscScalar re;
   PetscScalar v;
   MatStencil row, col;
   /* Well handling variables */
   PetscInt PerfIDMine, PerfIDOther, WellID;
-  PetscScalar apo, apw;
-  PetscScalar qo, qw;
   PetscInt MyI, MyJ, MyK;
   PetscInt OtherI, OtherJ, OtherK;
+  PetscScalar apo, apw;
+  PetscScalar qo, qw;
   /* Local values for variables*/
-  PetscScalar ***LocalFlowMask;
-  PetscScalar ***Localx3;
-  PetscScalar ***Localh1,   ***Localh2,   ***Localh3;
-  PetscScalar ***LocalMuo,  ***LocalMuw;
-  PetscScalar ***LocalRhoo, ***LocalRhow;
-  PetscScalar ***LocalK11,  ***LocalK22,  ***LocalK33;
-  PetscScalar ***LocalKro,  ***LocalKrw;
-  PetscScalar ***LocalPcow;
   PetscScalar ***LocalRHS;
-  PetscScalar ***LocalBo, ***LocalBw;
   PetscScalar ***LocalQo, ***LocalQw;
 
   PetscFunctionBegin;
   /* Get dimensions and extents of the local vectors */
   ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
   ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
-  /* Grab the data for the flow field */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);
-  /* Grab the local depth */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->x3, &Localx3);CHKERRQ(ierr);
-  /* Grab the local geometry */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h1, &Localh1);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h2, &Localh2);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h3, &Localh3);CHKERRQ(ierr);
-  /* Grab the Densities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhoo, &LocalRhoo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhow, &LocalRhow);CHKERRQ(ierr);
-  /* Grab the local viscosities*/
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Muo, &LocalMuo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Muw, &LocalMuw);CHKERRQ(ierr);
-  /* Grab the local permeabilities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K11, &LocalK11);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K22, &LocalK22);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K33, &LocalK33);CHKERRQ(ierr);
-  /* Grab the local permeabilities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Kro, &LocalKro);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Krw, &LocalKrw);CHKERRQ(ierr);
-  /* Grab the local capillary pressure */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Pcow, &LocalPcow);CHKERRQ(ierr);
-  /* Grab the local data for volume factors at the cell centers */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bo, &LocalBo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bw, &LocalBw);CHKERRQ(ierr);
   /* Grab the local RHS */
   ierr = DAVecGetArray(MySim->SimDA, MySim->RHS, &LocalRHS);CHKERRQ(ierr);
   /* Grab the local flow rate */
@@ -373,193 +337,141 @@ extern PetscErrorCode DefiantIMPES2PhHandleWells(BlackOilReservoirSimulation* My
   for (WellID = 0; WellID < MySim->NumberOfWells; WellID++) {
     for (PerfIDMine = 0; PerfIDMine
         < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDMine++) {
-      if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
-        MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = -1.0;
-      } else {
-        MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
-        MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
-        MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
-        if ((MySim->Wells[WellID]).Perforations[PerfIDMine].Orientation
-            == PERF_ORIENTATION_X1X1) {
-          re = 0.14 / 0.5 * sqrt((sqrt(LocalK33[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI]) * Localh2[MyK][MyJ][MyI]
-              * Localh2[MyK][MyJ][MyI] + sqrt(LocalK22[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI]) * Localh3[MyK][MyJ][MyI]
-              * Localh3[MyK][MyJ][MyI])) / (pow(LocalK33[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI], 0.25) + pow(LocalK22[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI], 0.25));
-          MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = 2.0 * PI
-              * Localh1[MyK][MyJ][MyI] * sqrt(LocalK11[MyK][MyJ][MyI]
-              * LocalK33[MyK][MyJ][MyI]) / (log(re
-              / MySim->Wells[WellID].Perforations[PerfIDMine].Rw)
-              + MySim->Wells[WellID].Perforations[PerfIDMine].S);
-        } else if ((MySim->Wells[WellID]).Perforations[PerfIDMine].Orientation
-            == PERF_ORIENTATION_X2X2) {
-          re = 0.14 / 0.5 * sqrt((sqrt(LocalK33[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI]) * Localh1[MyK][MyJ][MyI]
-              * Localh1[MyK][MyJ][MyI] + sqrt(LocalK11[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI]) * Localh3[MyK][MyJ][MyI]
-              * Localh3[MyK][MyJ][MyI])) / (pow(LocalK33[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI], 0.25) + pow(LocalK11[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI], 0.25));
-          MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = 2.0 * PI
-              * Localh2[MyK][MyJ][MyI] * sqrt(LocalK11[MyK][MyJ][MyI]
-              * LocalK33[MyK][MyJ][MyI]) / (log(re
-              / MySim->Wells[WellID].Perforations[PerfIDMine].Rw)
-              + MySim->Wells[WellID].Perforations[PerfIDMine].S);
-        } else if ((MySim->Wells[WellID]).Perforations[PerfIDMine].Orientation
-            == PERF_ORIENTATION_X3X3) {
-          re = 0.14 / 0.5 * sqrt((sqrt(LocalK22[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI]) * Localh1[MyK][MyJ][MyI]
-              * Localh1[MyK][MyJ][MyI] + sqrt(LocalK11[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI]) * Localh2[MyK][MyJ][MyI]
-              * Localh2[MyK][MyJ][MyI])) / (pow(LocalK22[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI], 0.25) + pow(LocalK11[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI], 0.25));
-          MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = 2.0 * PI
-              * Localh3[MyK][MyJ][MyI] * sqrt(LocalK11[MyK][MyJ][MyI]
-              * LocalK22[MyK][MyJ][MyI]) / (log(re
-              / MySim->Wells[WellID].Perforations[PerfIDMine].Rw)
-              + MySim->Wells[WellID].Perforations[PerfIDMine].S);
-        }
-      }
-    }
-  }
+      MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
+      MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
+      MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
 
-  for (WellID = 0; WellID < MySim->NumberOfWells; WellID++) {
-    for (PerfIDMine = 0; PerfIDMine
-        < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDMine++) {
-      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE &&
-           (MySim->Wells[WellID].Perforations[PerfIDMine].I >= xs && MySim->Wells[WellID].Perforations[PerfIDMine].I < xs+xm &&
-            MySim->Wells[WellID].Perforations[PerfIDMine].J >= ys && MySim->Wells[WellID].Perforations[PerfIDMine].J < ys+ym &&
-            MySim->Wells[WellID].Perforations[PerfIDMine].K >= zs && MySim->Wells[WellID].Perforations[PerfIDMine].K < zs+zm) ){
-        if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
-          /* grab my index */
-          MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
-          MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
-          MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
-
-          if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == WATER_INJECTOR )
-          {
-            qw = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qw;
-            LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qw;
-            LocalQw[MyK][MyJ][MyI] = qw;
-          }
-          else if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == OIL_INJECTOR )
-          {
-            qo = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qo;
-            LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo;
-            LocalQo[MyK][MyJ][MyI] = qo;
-          }
-          if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == WATER_PRODUCER )
-          {
-            qw = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qw;
-            LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qw;
-            LocalQw[MyK][MyJ][MyI] = qw;
-          }
-          else if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == OIL_PRODUCER )
-          {
-            qo = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qo;
-            LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo;
-            LocalQo[MyK][MyJ][MyI] = qo;
-          }
-        } else if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == BHP_CONSTRAINT) {
-          /* set the row for the insert */
-          row.i = MyI; row.j = MyJ; row.k = MyK;
+      if (MyI >= xs && MyI < xs+xm && MyJ >= ys && MyJ < ys+ym && MyK >= zs && MyK < zs+zm)
+      {
+        if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE ){
           /* initialize temp variables for flow rates */
           qo = 0.0; qw = 0.0;
-          /* initialize temp variable for Ap */
-          apo = 0.0, apw = 0.0;
-          if ((MySim->Wells[WellID]).NumberOfPerforations == 1) {
-            /* for all other perforations belonging to the same well do this */
-            MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
-            MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
-            MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
-            qo  = (MySim->Wells[WellID]).Perforations[PerfIDMine].WellIndex
-                * LocalKro[MyK][MyJ][MyI] / LocalMuo[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].BHPo
-                - MySim->GravAcc * LocalRhoo[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].zbh
-                - Localx3[MyK][MyJ][MyI])) * Localh1[MyK][MyJ][MyI]
-                * Localh2[MyK][MyJ][MyI] * Localh3[MyK][MyJ][MyI]
-                / LocalBo[MyK][MyJ][MyI];
-            qw  = (MySim->Wells[WellID]).Perforations[PerfIDMine].WellIndex
-                * LocalKrw[MyK][MyJ][MyI] / LocalMuw[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].BHPw
-                + LocalPcow[MyK][MyJ][MyI] - MySim->GravAcc
-                * LocalRhow[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].zbh
-                - Localx3[MyK][MyJ][MyI])) * Localh1[MyK][MyJ][MyI]
-                * Localh2[MyK][MyJ][MyI] * Localh3[MyK][MyJ][MyI]
-                / LocalBw[MyK][MyJ][MyI];
-            apo = (MySim->Wells[WellID]).Perforations[PerfIDMine].WellIndex
-                * LocalKro[MyK][MyJ][MyI] / LocalMuo[MyK][MyJ][MyI]
-                * Localh1[MyK][MyJ][MyI] * Localh2[MyK][MyJ][MyI] * Localh3[MyK][MyJ][MyI]
-                / LocalBo[MyK][MyJ][MyI];
-            apw = (MySim->Wells[WellID]).Perforations[PerfIDMine].WellIndex
-                * LocalKrw[MyK][MyJ][MyI] / LocalMuw[MyK][MyJ][MyI]
-                * Localh1[MyK][MyJ][MyI] * Localh2[MyK][MyJ][MyI] * Localh3[MyK][MyJ][MyI]
-                / LocalBw[MyK][MyJ][MyI];
-            /* Store the flow rates and relevant data somewhere useful */
-            MySim->Wells[WellID].Perforations[PerfIDMine].Apo = apo;
-            MySim->Wells[WellID].Perforations[PerfIDMine].Apw = apw;
-            LocalQo[MyK][MyJ][MyI] = qo;
-            LocalQw[MyK][MyJ][MyI] = qw;
-            /* Add values to the Ap of the matrix */
-            row.i = MyI; row.j = MyJ; row.k = MyK;
-            v = apo+apw;
-            ierr = MatSetValuesStencil(MySim->A, 1, &row, 1, &row, &v, ADD_VALUES);CHKERRQ(ierr);
-            /* Add values to the RHS for the same column */
-            LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo + qw;
-          } else if ((MySim->Wells[WellID]).NumberOfPerforations > 1) {
-            /* Set qo and qw to totals, we will be subtracting perfs from other cells from those values */
-            qo = MySim->Wells[WellID].TotalQo;
-            qw = MySim->Wells[WellID].TotalQw;
-            for (PerfIDOther = 0; PerfIDOther
-                < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDOther++) {
-              OtherI = (MySim->Wells[WellID]).Perforations[PerfIDOther].I;
-              OtherJ = (MySim->Wells[WellID]).Perforations[PerfIDOther].J;
-              OtherK = (MySim->Wells[WellID]).Perforations[PerfIDOther].K;
-              if (PerfIDOther != PerfIDMine && MySim->Wells[WellID].Perforations[PerfIDOther].IsActive == PETSC_TRUE) {
-                /* for all other perforations belonging to the same well do this */
-                qo  = qo - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
-                    * LocalKro[OtherK][OtherJ][OtherI] / LocalMuo[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].BHPo
-                    - MySim->GravAcc * LocalRhoo[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].zbh
-                    - Localx3[OtherK][OtherJ][OtherI])) * Localh1[OtherK][OtherJ][OtherI]
-                    * Localh2[OtherK][OtherJ][OtherI] * Localh3[OtherK][OtherJ][OtherI]
-                    / LocalBo[OtherK][OtherJ][OtherI];
-                qw  = qw - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
-                    * LocalKrw[OtherK][OtherJ][OtherI] / LocalMuw[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].BHPw
-                    + LocalPcow[OtherK][OtherJ][OtherI] - MySim->GravAcc
-                    * LocalRhow[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].zbh
-                    - Localx3[OtherK][OtherJ][OtherI])) * Localh1[OtherK][OtherJ][OtherI]
-                    * Localh2[OtherK][OtherJ][OtherI] * Localh3[OtherK][OtherJ][OtherI]
-                    / LocalBw[OtherK][OtherJ][OtherI];
-                apo = -(MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
-                    * LocalKro[OtherK][OtherJ][OtherI] / LocalMuo[OtherK][OtherJ][OtherI]
-                    * Localh1[OtherK][OtherJ][OtherI] * Localh2[OtherK][OtherJ][OtherI] * Localh3[OtherK][OtherJ][OtherI]
-                    / LocalBo[OtherK][OtherJ][OtherI];
-                apw = - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
-                    * LocalKrw[OtherK][OtherJ][OtherI] / LocalMuw[OtherK][OtherJ][OtherI]
-                    * Localh1[OtherK][OtherJ][OtherI] * Localh2[OtherK][OtherJ][OtherI] * Localh3[OtherK][OtherJ][OtherI]
-                    / LocalBw[OtherK][OtherJ][OtherI];
-                /* Add values to the Ap of the matrix */
-                /* we are at the same row but at a different column */
-                row.i = MyI; row.j = MyJ; row.k = MyK;
-                col.i = OtherI; col.j =OtherJ; col.k = OtherK;
-                v = apo+apw;
-                ierr = MatSetValuesStencil(MySim->A, 1, &row, 1, &col, &v, ADD_VALUES);CHKERRQ(ierr);
-              }
+          if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
+
+            if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == WATER_INJECTOR )
+            {
+              qw = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qw;
+              LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qw;
+              LocalQw[MyK][MyJ][MyI] = qw;
             }
-            /* now that I have the final qo and qw add them to the RHS */
-            /* Add values to the RHS for the same column */
-            LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo + qw;
-            LocalQo[MyK][MyJ][MyI] = qo;
-            LocalQw[MyK][MyJ][MyI] = qw;
+            else if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == OIL_INJECTOR )
+            {
+              qo = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qo;
+              LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo;
+              LocalQo[MyK][MyJ][MyI] = qo;
+            }
+            else if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == WATER_PRODUCER )
+            {
+              qw = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qw;
+              LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qw;
+              LocalQw[MyK][MyJ][MyI] = qw;
+            }
+            else if (MySim->Wells[WellID].Perforations[PerfIDMine].WellType == OIL_PRODUCER )
+            {
+              qo = (MySim->Wells[WellID]).Perforations[PerfIDMine].Qo;
+              LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo;
+              LocalQo[MyK][MyJ][MyI] = qo;
+            }
+          } else if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == BHP_CONSTRAINT) {
+            /* set the row for the insert */
+            row.i = MyI; row.j = MyJ; row.k = MyK;
+            /* initialize temp variables for flow rates */
+            qo = 0.0; qw = 0.0;
+            /* initialize temp variable for Ap */
+            apo = 0.0, apw = 0.0;
+            if ((MySim->Wells[WellID]).NumberOfPerforations == 1) {
+              /* for all other perforations belonging to the same well do this */
+              qo  = MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].Kro / MySim->Wells[WellID].Perforations[PerfIDMine].Muo
+                  * ((MySim->Wells[WellID]).Perforations[PerfIDMine].BHPo
+                  - MySim->GravAcc * MySim->Wells[WellID].Perforations[PerfIDMine].Rhoo
+                  * (MySim->Wells[WellID].Perforations[PerfIDMine].zbh
+                  - MySim->Wells[WellID].Perforations[PerfIDMine].x3)) * MySim->Wells[WellID].Perforations[PerfIDMine].h1
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
+                  / MySim->Wells[WellID].Perforations[PerfIDMine].Bo;
+              qw  = MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].Krw / MySim->Wells[WellID].Perforations[PerfIDMine].Muw
+                  * (MySim->Wells[WellID].Perforations[PerfIDMine].BHPw
+                  + MySim->Wells[WellID].Perforations[PerfIDMine].Pcow - MySim->GravAcc
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].Rhow
+                  * (MySim->Wells[WellID].Perforations[PerfIDMine].zbh
+                  - MySim->Wells[WellID].Perforations[PerfIDMine].x3)) * MySim->Wells[WellID].Perforations[PerfIDMine].h1
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
+                  / MySim->Wells[WellID].Perforations[PerfIDMine].Bw;
+              apo = MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].Kro / MySim->Wells[WellID].Perforations[PerfIDMine].Muo
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].h1 * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
+                  / MySim->Wells[WellID].Perforations[PerfIDMine].Bo;
+              apw = MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].Krw / MySim->Wells[WellID].Perforations[PerfIDMine].Muw
+                  * MySim->Wells[WellID].Perforations[PerfIDMine].h1 * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
+                  / MySim->Wells[WellID].Perforations[PerfIDMine].Bw;
+
+              /* Since one perforation, the total well is the value here */
+              MySim->Wells[WellID].TotalQo = qo;
+              MySim->Wells[WellID].TotalQw = qw;
+              /* Store the flow rates and relevant data somewhere useful */
+              MySim->Wells[WellID].Perforations[PerfIDMine].Apo = apo;
+              MySim->Wells[WellID].Perforations[PerfIDMine].Apw = apw;
+              LocalQo[MyK][MyJ][MyI] = qo;
+              LocalQw[MyK][MyJ][MyI] = qw;
+              /* Add values to the Ap of the matrix */
+              row.i = MyI; row.j = MyJ; row.k = MyK;
+              v = apo+apw;
+              ierr = MatSetValuesStencil(MySim->A, 1, &row, 1, &row, &v, ADD_VALUES);CHKERRQ(ierr);
+              /* Add values to the RHS for the same column */
+              LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo + qw;
+            } else if ((MySim->Wells[WellID]).NumberOfPerforations > 1) {
+              /* Set qo and qw to totals, we will be subtracting perfs from other cells from those values */
+              qo = MySim->Wells[WellID].TotalQo;
+              qw = MySim->Wells[WellID].TotalQw;
+              for (PerfIDOther = 0; PerfIDOther
+                  < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDOther++) {
+                if (PerfIDOther != PerfIDMine && MySim->Wells[WellID].Perforations[PerfIDOther].IsActive == PETSC_TRUE) {
+                  OtherI = (MySim->Wells[WellID]).Perforations[PerfIDOther].I;
+                  OtherJ = (MySim->Wells[WellID]).Perforations[PerfIDOther].J;
+                  OtherK = (MySim->Wells[WellID]).Perforations[PerfIDOther].K;
+                  /* for all other perforations belonging to the same well do this */
+                  qo  = qo - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].Kro / MySim->Wells[WellID].Perforations[PerfIDOther].Muo
+                      * ((MySim->Wells[WellID]).Perforations[PerfIDOther].BHPo
+                      - MySim->GravAcc * MySim->Wells[WellID].Perforations[PerfIDOther].Rhoo
+                      * ((MySim->Wells[WellID]).Perforations[PerfIDOther].zbh
+                      - MySim->Wells[WellID].Perforations[PerfIDOther].x3)) * MySim->Wells[WellID].Perforations[PerfIDOther].h1
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].h2 * MySim->Wells[WellID].Perforations[PerfIDOther].h3
+                      / MySim->Wells[WellID].Perforations[PerfIDOther].Bo;
+                  qw  = qw - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].Krw / MySim->Wells[WellID].Perforations[PerfIDOther].Muw
+                      * ((MySim->Wells[WellID]).Perforations[PerfIDOther].BHPw
+                      + MySim->Wells[WellID].Perforations[PerfIDOther].Pcow - MySim->GravAcc
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].Rhow
+                      * ((MySim->Wells[WellID]).Perforations[PerfIDOther].zbh
+                      - MySim->Wells[WellID].Perforations[PerfIDOther].x3)) * MySim->Wells[WellID].Perforations[PerfIDOther].h1
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].h2 * MySim->Wells[WellID].Perforations[PerfIDOther].h3
+                      / MySim->Wells[WellID].Perforations[PerfIDOther].Bw;
+                  apo = -(MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].Kro / MySim->Wells[WellID].Perforations[PerfIDOther].Muo
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].h1 * MySim->Wells[WellID].Perforations[PerfIDOther].h2 * MySim->Wells[WellID].Perforations[PerfIDOther].h3
+                      / MySim->Wells[WellID].Perforations[PerfIDOther].Bo;
+                  apw = - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].Krw / MySim->Wells[WellID].Perforations[PerfIDOther].Muw
+                      * MySim->Wells[WellID].Perforations[PerfIDOther].h1 * MySim->Wells[WellID].Perforations[PerfIDOther].h2 * MySim->Wells[WellID].Perforations[PerfIDOther].h3
+                      / MySim->Wells[WellID].Perforations[PerfIDOther].Bw;
+
+                  /* Add values to the Ap of the matrix */
+                  /* we are at the same row but at a different column */
+                  row.i = MyI; row.j = MyJ; row.k = MyK;
+                  col.i = OtherI; col.j =OtherJ; col.k = OtherK;
+                  v = apo+apw;
+                  ierr = MatSetValuesStencil(MySim->A, 1, &row, 1, &col, &v, ADD_VALUES);CHKERRQ(ierr);
+                }
+              }
+              /* now that I have the final qo and qw add them to the RHS */
+              /* Add values to the RHS for the same column */
+              LocalRHS[MyK][MyJ][MyI] = LocalRHS[MyK][MyJ][MyI] + qo + qw;
+              LocalQo[MyK][MyJ][MyI] = qo;
+              LocalQw[MyK][MyJ][MyI] = qw;
+            }
           }
         }
       }
@@ -593,7 +505,6 @@ extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirS
 {
   PetscErrorCode ierr;
   PetscInt mx, my, mz, xm, ym, zm, xs, ys, zs;
-  PetscScalar re;
   /* Well handling variables */
   PetscInt PerfIDMine, PerfIDOther, WellID;
   PetscScalar apo, apw;
@@ -601,118 +512,23 @@ extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirS
   PetscInt MyI, MyJ, MyK;
   PetscInt OtherI, OtherJ, OtherK;
   /* Local values for variables*/
-  PetscScalar ***LocalFlowMask;
-  PetscScalar ***Localx3;
-  PetscScalar ***Localh1,   ***Localh2,   ***Localh3;
-  PetscScalar ***LocalMuo,  ***LocalMuw;
-  PetscScalar ***LocalRhoo, ***LocalRhow;
-  PetscScalar ***LocalK11,  ***LocalK22,  ***LocalK33;
-  PetscScalar ***LocalKro,  ***LocalKrw;
-  PetscScalar ***LocalPo,  ***LocalPw;
-  PetscScalar ***LocalPcow;
-  PetscScalar ***LocalBo, ***LocalBw;
+  PetscScalar ***LocalRHS;
   PetscScalar ***LocalQo, ***LocalQw;
 
   PetscFunctionBegin;
   /* Get dimensions and extents of the local vectors */
   ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
   ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
-  /* Grab the data for the flow field */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);
-  /* Grab the local depth */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->x3, &Localx3);CHKERRQ(ierr);
-  /* Grab the local geometry */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h1, &Localh1);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h2, &Localh2);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->h3, &Localh3);CHKERRQ(ierr);
-  /* Grab the Densities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhoo, &LocalRhoo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Rhow, &LocalRhow);CHKERRQ(ierr);
-  /* Grab the local viscosities*/
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Muo, &LocalMuo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Muw, &LocalMuw);CHKERRQ(ierr);
-  /* Grab the local permeabilities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K11, &LocalK11);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K22, &LocalK22);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->K33, &LocalK33);CHKERRQ(ierr);
-  /* Grab the local permeabilities */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Kro, &LocalKro);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Krw, &LocalKrw);CHKERRQ(ierr);
-  /* Grab the local pressures */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Po, &LocalPo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Pw, &LocalPw);CHKERRQ(ierr);
-  /* Grab the local capillary pressure */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Pcow, &LocalPcow);CHKERRQ(ierr);
-  /* Grab the local data for volume factors at the cell centers */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bo, &LocalBo);CHKERRQ(ierr);
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Bw, &LocalBw);CHKERRQ(ierr);
+  /* Grab the local RHS */
+  ierr = DAVecGetArray(MySim->SimDA, MySim->RHS, &LocalRHS);CHKERRQ(ierr);
   /* Grab the local flow rate */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Qo, &LocalQo);CHKERRQ(ierr);
   ierr = DAVecGetArray(MySim->SimDA, MySim->Qw, &LocalQw);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, MySim->Qo, &LocalQo);CHKERRQ(ierr);
 
   for (WellID = 0; WellID < MySim->NumberOfWells; WellID++) {
     for (PerfIDMine = 0; PerfIDMine
         < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDMine++) {
-      if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
-        MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = -1.0;
-      } else {
-        MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
-        MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
-        MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
-        if ((MySim->Wells[WellID]).Perforations[PerfIDMine].Orientation
-            == PERF_ORIENTATION_X1X1) {
-          re = 0.14 / 0.5 * sqrt((sqrt(LocalK33[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI]) * Localh2[MyK][MyJ][MyI]
-              * Localh2[MyK][MyJ][MyI] + sqrt(LocalK22[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI]) * Localh3[MyK][MyJ][MyI]
-              * Localh3[MyK][MyJ][MyI])) / (pow(LocalK33[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI], 0.25) + pow(LocalK22[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI], 0.25));
-          MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = 2.0 * PI
-              * Localh1[MyK][MyJ][MyI] * sqrt(LocalK11[MyK][MyJ][MyI]
-              * LocalK33[MyK][MyJ][MyI]) / (log(re
-              / MySim->Wells[WellID].Perforations[PerfIDMine].Rw)
-              + MySim->Wells[WellID].Perforations[PerfIDMine].S);
-        } else if ((MySim->Wells[WellID]).Perforations[PerfIDMine].Orientation
-            == PERF_ORIENTATION_X2X2) {
-          re = 0.14 / 0.5 * sqrt((sqrt(LocalK33[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI]) * Localh1[MyK][MyJ][MyI]
-              * Localh1[MyK][MyJ][MyI] + sqrt(LocalK11[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI]) * Localh3[MyK][MyJ][MyI]
-              * Localh3[MyK][MyJ][MyI])) / (pow(LocalK33[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI], 0.25) + pow(LocalK11[MyK][MyJ][MyI]
-              / LocalK33[MyK][MyJ][MyI], 0.25));
-          MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = 2.0 * PI
-              * Localh2[MyK][MyJ][MyI] * sqrt(LocalK11[MyK][MyJ][MyI]
-              * LocalK33[MyK][MyJ][MyI]) / (log(re
-              / MySim->Wells[WellID].Perforations[PerfIDMine].Rw)
-              + MySim->Wells[WellID].Perforations[PerfIDMine].S);
-        } else if ((MySim->Wells[WellID]).Perforations[PerfIDMine].Orientation
-            == PERF_ORIENTATION_X3X3) {
-          re = 0.14 / 0.5 * sqrt((sqrt(LocalK22[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI]) * Localh1[MyK][MyJ][MyI]
-              * Localh1[MyK][MyJ][MyI] + sqrt(LocalK11[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI]) * Localh2[MyK][MyJ][MyI]
-              * Localh2[MyK][MyJ][MyI])) / (pow(LocalK22[MyK][MyJ][MyI]
-              / LocalK11[MyK][MyJ][MyI], 0.25) + pow(LocalK11[MyK][MyJ][MyI]
-              / LocalK22[MyK][MyJ][MyI], 0.25));
-          MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex = 2.0 * PI
-              * Localh3[MyK][MyJ][MyI] * sqrt(LocalK11[MyK][MyJ][MyI]
-              * LocalK22[MyK][MyJ][MyI]) / (log(re
-              / MySim->Wells[WellID].Perforations[PerfIDMine].Rw)
-              + MySim->Wells[WellID].Perforations[PerfIDMine].S);
-        }
-      }
-    }
-  }
-
-  for (WellID = 0; WellID < MySim->NumberOfWells; WellID++) {
-    for (PerfIDMine = 0; PerfIDMine
-        < (MySim->Wells[WellID]).NumberOfPerforations; PerfIDMine++) {
-      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE &&
-          (MySim->Wells[WellID].Perforations[PerfIDMine].I >= xs && MySim->Wells[WellID].Perforations[PerfIDMine].I < xs+xm &&
-           MySim->Wells[WellID].Perforations[PerfIDMine].J >= ys && MySim->Wells[WellID].Perforations[PerfIDMine].J < ys+ym &&
-           MySim->Wells[WellID].Perforations[PerfIDMine].K >= zs && MySim->Wells[WellID].Perforations[PerfIDMine].K < zs+zm)){
+      if (MySim->Wells[WellID].Perforations[PerfIDMine].IsActive == PETSC_TRUE){
         if (MySim->Wells[WellID].Perforations[PerfIDMine].Constraint == FLOW_RATE_CONSTRAINT){
           /* grab my index */
           MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
@@ -745,32 +561,29 @@ extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirS
           /* initialize temp variable for Ap */
           apo = 0.0, apw = 0.0;
           if ((MySim->Wells[WellID]).NumberOfPerforations == 1) {
-            MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
-            MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
-            MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
             /* for all other perforations belonging to the same well do this */
             MyI = (MySim->Wells[WellID]).Perforations[PerfIDMine].I;
             MyJ = (MySim->Wells[WellID]).Perforations[PerfIDMine].J;
             MyK = (MySim->Wells[WellID]).Perforations[PerfIDMine].K;
-            qo  = (MySim->Wells[WellID]).Perforations[PerfIDMine].WellIndex
-                * LocalKro[MyK][MyJ][MyI] / LocalMuo[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].BHPo
-                - LocalPo[MyK][MyJ][MyI]
-                - MySim->GravAcc * LocalRhoo[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].zbh
-                - Localx3[MyK][MyJ][MyI])) * Localh1[MyK][MyJ][MyI]
-                * Localh2[MyK][MyJ][MyI] * Localh3[MyK][MyJ][MyI]
-                / LocalBo[MyK][MyJ][MyI];
-            qw  = (MySim->Wells[WellID]).Perforations[PerfIDMine].WellIndex
-                * LocalKrw[MyK][MyJ][MyI] / LocalMuw[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].BHPw
-                - LocalPw[MyK][MyJ][MyI]
-                + LocalPcow[MyK][MyJ][MyI] - MySim->GravAcc
-                * LocalRhow[MyK][MyJ][MyI]
-                * ((MySim->Wells[WellID]).Perforations[PerfIDMine].zbh
-                - Localx3[MyK][MyJ][MyI])) * Localh1[MyK][MyJ][MyI]
-                * Localh2[MyK][MyJ][MyI] * Localh3[MyK][MyJ][MyI]
-                / LocalBw[MyK][MyJ][MyI];
+            qo  = MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex
+                * MySim->Wells[WellID].Perforations[PerfIDMine].Kro / MySim->Wells[WellID].Perforations[PerfIDMine].Muo
+                * (MySim->Wells[WellID].Perforations[PerfIDMine].BHPo
+                - MySim->Wells[WellID].Perforations[PerfIDMine].Po
+                - MySim->GravAcc * MySim->Wells[WellID].Perforations[PerfIDMine].Rhoo
+                * (MySim->Wells[WellID].Perforations[PerfIDMine].zbh
+                - MySim->Wells[WellID].Perforations[PerfIDMine].x3)) * MySim->Wells[WellID].Perforations[PerfIDMine].h1
+                * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
+                / MySim->Wells[WellID].Perforations[PerfIDMine].Bo;
+            qw  = MySim->Wells[WellID].Perforations[PerfIDMine].WellIndex
+                * MySim->Wells[WellID].Perforations[PerfIDMine].Krw / MySim->Wells[WellID].Perforations[PerfIDMine].Muw
+                * (MySim->Wells[WellID].Perforations[PerfIDMine].BHPw
+                - MySim->Wells[WellID].Perforations[PerfIDMine].Pw
+                + MySim->Wells[WellID].Perforations[PerfIDMine].Pcow - MySim->GravAcc
+                * MySim->Wells[WellID].Perforations[PerfIDMine].Rhow
+                * (MySim->Wells[WellID].Perforations[PerfIDMine].zbh
+                - MySim->Wells[WellID].Perforations[PerfIDMine].x3)) * MySim->Wells[WellID].Perforations[PerfIDMine].h1
+                * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
+                / MySim->Wells[WellID].Perforations[PerfIDMine].Bw;
             /* Store the flow rates and relevant data somewhere useful */
             LocalQo[MyK][MyJ][MyI] = qo;
             LocalQw[MyK][MyJ][MyI] = qw;
@@ -785,28 +598,25 @@ extern PetscErrorCode DefiantIMPES2PhHandleWellsForSaturation(BlackOilReservoirS
               OtherK = (MySim->Wells[WellID]).Perforations[PerfIDOther].K;
               if (PerfIDOther != PerfIDMine && MySim->Wells[WellID].Perforations[PerfIDOther].IsActive == PETSC_TRUE) {
                 /* for all other perforations belonging to the same well do this */
-                OtherI = (MySim->Wells[WellID]).Perforations[PerfIDOther].I;
-                OtherJ = (MySim->Wells[WellID]).Perforations[PerfIDOther].J;
-                OtherK = (MySim->Wells[WellID]).Perforations[PerfIDOther].K;
-                qo  = qo - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
-                    * LocalKro[OtherK][OtherJ][OtherI] / LocalMuo[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].BHPo
-                    - LocalPo[OtherK][OtherJ][OtherI]
-                    - MySim->GravAcc * LocalRhoo[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].zbh
-                    - Localx3[OtherK][OtherJ][OtherI])) * Localh1[OtherK][OtherJ][OtherI]
-                    * Localh2[OtherK][OtherJ][OtherI] * Localh3[OtherK][OtherJ][OtherI]
-                    / LocalBo[OtherK][OtherJ][OtherI];
-                qw  = qw - (MySim->Wells[WellID]).Perforations[PerfIDOther].WellIndex
-                    * LocalKrw[OtherK][OtherJ][OtherI] / LocalMuw[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].BHPw
-                    - LocalPw[OtherK][OtherJ][OtherI]
-                    + LocalPcow[OtherK][OtherJ][OtherI] - MySim->GravAcc
-                    * LocalRhow[OtherK][OtherJ][OtherI]
-                    * ((MySim->Wells[WellID]).Perforations[PerfIDOther].zbh
-                    - Localx3[OtherK][OtherJ][OtherI])) * Localh1[OtherK][OtherJ][OtherI]
-                    * Localh2[OtherK][OtherJ][OtherI] * Localh3[OtherK][OtherJ][OtherI]
-                    / LocalBw[OtherK][OtherJ][OtherI];
+                qo  = qo - MySim->Wells[WellID].Perforations[PerfIDOther].WellIndex
+                    * MySim->Wells[WellID].Perforations[PerfIDOther].Kro / MySim->Wells[WellID].Perforations[PerfIDOther].Muo
+                    * (MySim->Wells[WellID].Perforations[PerfIDOther].BHPo
+                    - MySim->Wells[WellID].Perforations[PerfIDOther].Po
+                    - MySim->GravAcc * MySim->Wells[WellID].Perforations[PerfIDOther].Rhoo
+                    * (MySim->Wells[WellID].Perforations[PerfIDOther].zbh
+                    - MySim->Wells[WellID].Perforations[PerfIDOther].x3)) * MySim->Wells[WellID].Perforations[PerfIDOther].h1
+                    * MySim->Wells[WellID].Perforations[PerfIDOther].h2 * MySim->Wells[WellID].Perforations[PerfIDOther].h3
+                    / MySim->Wells[WellID].Perforations[PerfIDOther].Bo;
+                qw  = qw - MySim->Wells[WellID].Perforations[PerfIDOther].WellIndex
+                    * MySim->Wells[WellID].Perforations[PerfIDOther].Krw / MySim->Wells[WellID].Perforations[PerfIDOther].Muw
+                    * (MySim->Wells[WellID].Perforations[PerfIDOther].BHPw
+                    - MySim->Wells[WellID].Perforations[PerfIDOther].Pw
+                    + MySim->Wells[WellID].Perforations[PerfIDOther].Pcow - MySim->GravAcc
+                    * MySim->Wells[WellID].Perforations[PerfIDOther].Rhow
+                    * (MySim->Wells[WellID].Perforations[PerfIDOther].zbh
+                    - MySim->Wells[WellID].Perforations[PerfIDOther].x3)) * MySim->Wells[WellID].Perforations[PerfIDOther].h1
+                    * MySim->Wells[WellID].Perforations[PerfIDOther].h2 * MySim->Wells[WellID].Perforations[PerfIDOther].h3
+                    / MySim->Wells[WellID].Perforations[PerfIDOther].Bw;
               }
             }
             LocalQo[MyK][MyJ][MyI] = qo;
@@ -856,6 +666,8 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   PetscScalar ***LocalQw;
   /* Saturations */
   PetscScalar ***LocalSo, ***LocalSw;
+  /* Temporary vector */
+  Vec vecLocalPw;
 
   /* Temporary IMPES variables */
   PetscInt TempInt;
@@ -894,8 +706,12 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhowx3m, &LocalRhowx3m);CHKERRQ(ierr);
   /* Grab the volume factor */
   ierr = DAVecGetArray(MySim->SimDA, MySim->Bw, &LocalBw);CHKERRQ(ierr);
-  /* Grab the local data for water pressure and porosity */
-  ierr = DAVecGetArray(MySim->SimDA, MySim->Pw, &LocalPw);CHKERRQ(ierr);
+  /* Grab the local data for water pressure */
+  ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Pw,INSERT_VALUES,vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAGlobalToLocalEnd(MySim->SimDA,MySim->Pw,INSERT_VALUES,vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DAVecGetArray(MySim->SimDA, vecLocalPw, &LocalPw);CHKERRQ(ierr);
+  /* Get the porosity */
   ierr = DAVecGetArray(MySim->SimDA, MySim->Phi, &LocalPhi);CHKERRQ(ierr);
   /* Grab the local flow rate */
   ierr = DAVecGetArray(MySim->SimDA, MySim->Qw, &LocalQw);CHKERRQ(ierr);
@@ -1042,25 +858,83 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
   {
     /* we already have the values at cell faces, we interpolate at faces */
     ierr = DefiantComputeRhoAndMuAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+    ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+#if DEFIANT_DEBUG
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output AKHX1m is: ");
     ierr = VecView(MySim->AKHx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output AKHX1p is: ");
     ierr = VecView(MySim->AKHx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = DefiantComputeRelativePermsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermox1m is: ");
     ierr = VecView(MySim->RelPermox1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermox1p is: ");
     ierr = VecView(MySim->RelPermox1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermwx1m is: ");
     ierr = VecView(MySim->RelPermwx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermwx1p is: ");
     ierr = VecView(MySim->RelPermwx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+#endif
 
     ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
 
     /* we have everything at the faces so we compute transmissbility */
     ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
+
+#if DEFIANT_DEBUG
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox1m is: ");
+    ierr = VecView(MySim->RelPermox1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox1p is: ");
+    ierr = VecView(MySim->RelPermox1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1m is: ");
+    ierr = VecView(MySim->RelPermwx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1p is: ");
+    ierr = VecView(MySim->RelPermwx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox2m is: ");
+    ierr = VecView(MySim->RelPermox2m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox2p is: ");
+    ierr = VecView(MySim->RelPermox2p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx2m is: ");
+    ierr = VecView(MySim->RelPermwx2m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx2p is: ");
+    ierr = VecView(MySim->RelPermwx2p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox3m is: ");
+    ierr = VecView(MySim->RelPermox3m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox3p is: ");
+    ierr = VecView(MySim->RelPermox3p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx3m is: ");
+    ierr = VecView(MySim->RelPermwx3m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx3p is: ");
+    ierr = VecView(MySim->RelPermwx3p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Tox1m is: ");
+    ierr = VecView(MySim->Tox1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Tox1p is: ");
+    ierr = VecView(MySim->Tox1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Twx1m is: ");
+    ierr = VecView(MySim->Twx1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Twx1p is: ");
+    ierr = VecView(MySim->Twx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Tox2m is: ");
+    ierr = VecView(MySim->Tox2m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Tox2p is: ");
+    ierr = VecView(MySim->Tox2p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Twx2m is: ");
+    ierr = VecView(MySim->Twx2m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Twx2p is: ");
+    ierr = VecView(MySim->Twx2p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Tox3m is: ");
+    ierr = VecView(MySim->Tox3m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Tox3p is: ");
+    ierr = VecView(MySim->Tox3p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Twx3m is: ");
+    ierr = VecView(MySim->Twx3m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Twx3p is: ");
+    ierr = VecView(MySim->Twx3p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+#endif
 
     /* IMPES 2Ph functions */
     ierr = Defiant2PhGravity(MySim);CHKERRQ(ierr);CHKMEMQ;
@@ -1070,24 +944,29 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     ierr = DefiantIMPES2PhAssembleMatrix(MySim);CHKERRQ(ierr);CHKMEMQ;
     /* assemble RHS */
     ierr = DefiantIMPES2PhAssembleRHS(MySim);CHKERRQ(ierr);CHKMEMQ;
+    /* Sync the well information */
+    ierr = DefiantBlackOilComputePerfIndicesSyncPerfs(MySim);CHKERRQ(ierr);CHKMEMQ;
     /* handling the wells is done AFTER we have the matrix and the RHS */
     ierr = DefiantIMPES2PhHandleWells(MySim);CHKERRQ(ierr);CHKMEMQ;
 
+#if DEFIANT_DEBUG
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Qo is: ");
     ierr = VecView(MySim->Qo,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Qw is: ");
     ierr = VecView(MySim->Qw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-
     /* Diagnostic output */
     ierr = MatView(MySim->A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
     ierr = VecView(MySim->RHS,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+#endif
 
     /* we now are ready to solve */
     ierr = DefiantIMPES2PhSolve(MySim);CHKERRQ(ierr);CHKMEMQ;
     ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
 
+#if DEFIANT_DEBUG
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output pressure is: ");
     ierr = VecView(MySim->Po,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+#endif
 
     /* With the new pressure, we update sats then capillary pressures then pressures
      * Then update relative perms, porosity, density, volume factors and viscosities */
@@ -1102,6 +981,8 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
 
     /* Now w eare ready to update the saturations using improved IMPES */
+    MySim->CurrentTimeS = MySim->CurrentTimeP;
+
     while(MySim->CurrentTimeS < MySim->CurrentTimeP + MySim->DeltaTP)
     {
       ierr = DefiantIMPES2PhUpdateSaturations(MySim);CHKERRQ(ierr);CHKMEMQ;
@@ -1123,10 +1004,12 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
       /* Transmissibility calculation routines */
       ierr = DefiantComputeTransmissibilities(MySim);CHKERRQ(ierr);CHKMEMQ;
 
+      /* Sync the well information */
+      ierr = DefiantBlackOilComputePerfIndicesSyncPerfs(MySim);CHKERRQ(ierr);CHKMEMQ;
       /* Finally update the well information */
       ierr = DefiantIMPES2PhHandleWellsForSaturation(MySim);CHKERRQ(ierr);CHKMEMQ;
 
-      /*
+#if DEFIANT_DEBUG
       ierr = PetscPrintf(PETSC_COMM_WORLD,"Output saturations is: ");
       ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
       ierr = PetscPrintf(PETSC_COMM_WORLD,"Pcow is: ");
@@ -1142,11 +1025,23 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
       ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox1p is: ");
       ierr = VecView(MySim->RelPermox1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
       ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermox1m is: ");
-      ierr = VecView(MySim->RelPermox1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ; */
+      ierr = VecView(MySim->RelPermox1m,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+#endif
 
       MySim->CurrentTimeS = MySim->CurrentTimeS + MySim->DeltaTS;
       ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current DeltaTS is: %f ", MySim->DeltaTS);
-      ierr = DefiantViewSaturationsASCII(MySim);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current CurrentTimeS is: %f ", MySim->CurrentTimeS);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current DeltaTP is: %f ", MySim->DeltaTP);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current CurrentTimeP is: %f ", MySim->CurrentTimeP);
+
+#if DEFIANT_DEBUG
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Sw is: ");
+      ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+#endif
+
+      /* Check if we are doing adaptive time-step IMPES */
+      if(MySim->AdaptiveTimeStep==PETSC_FALSE) break;
+
     }
 
     MySim->CurrentTimeP = MySim->CurrentTimeP + MySim->DeltaTP;
