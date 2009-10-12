@@ -14,7 +14,7 @@ static char help[] = "Defiant, a soon-to-be compositional reservoir simulator.\n
 #include "petscksp.h"
 #include "petscdmmg.h"
 
-#define DEFIANT_DEBUG             1
+#define DEFIANT_DEBUG             0
 #define DEFIANT_USE_X_VIEWER      0
 #define DEFIANT_USE_ASCII_VIEWER  0
 #define DEFIANT_USE_MATLAB_VIEWER 1
@@ -95,6 +95,15 @@ typedef struct {
   PetscReal zbh;   /* reference depth for above pressure */
   PetscReal Rw;    /* radius at perforation */
   PetscReal S;     /* Skin at perforation */
+  /* Other perforation properties */
+  PetscScalar Po, Pw, Pg;
+  PetscScalar Kro, Krw, Krg;
+  PetscScalar Muo, Muw, Mug;
+  PetscScalar Rhoo, Rhow, Rhog;
+  PetscScalar Pcow, Pcog;
+  PetscScalar Bo, Bw, Bg;
+  PetscScalar x1, x2, x3;
+  PetscScalar h1, h2, h3;
 } Perforation;
 
 typedef struct {
@@ -213,6 +222,7 @@ typedef struct {
   PetscReal CurrentTimeP, DeltaTP;
   PetscReal CurrentTimeS, DeltaTS;
   PetscReal DSDTmax, DSmax;
+  PetscTruth AdaptiveTimeStep;
 
   /* Parameters */
   PetscReal RockCompressibility;
@@ -358,7 +368,6 @@ extern PetscErrorCode DefiantNewtonRaphson3PhSolve(BlackOilReservoirSimulation* 
 extern PetscErrorCode DefiantNewtonRaphson3PhComputeLegacyTerms(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantNewtonRaphson3PhIterate(BlackOilReservoirSimulation* MySim);
 
-
 /* Clean matrix and RHS */
 extern PetscErrorCode DefiantClearMatrixRHS(BlackOilReservoirSimulation* MySim);
 
@@ -367,6 +376,10 @@ extern PetscErrorCode DefiantComputeKrw(PetscScalar  * Krw,  PetscScalar Sw);
 extern PetscErrorCode DefiantComputeKrg(PetscScalar  * Krg,  PetscScalar Sg);
 extern PetscErrorCode DefiantComputeKrow(PetscScalar * Krow, PetscScalar Sw);
 extern PetscErrorCode DefiantComputeKrog(PetscScalar * Krog, PetscScalar Sg);
+
+/* Production functions for BlackOil */
+extern PetscErrorCode DefiantBlackOilComputePerfIndicesSyncPerfs(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantBlackOilProduction(BlackOilReservoirSimulation* MySim);
 
 /* Well handling and book-keeping functions */
 extern PetscErrorCode DefiantAddPerforation(Well *MyWell);
@@ -402,5 +415,12 @@ extern PetscErrorCode DefiantViewPressuresASCII(BlackOilReservoirSimulation* MyS
 /* various viewing routines for saturation */
 extern PetscErrorCode DefiantViewSaturationsSTDOUT(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantViewSaturationsASCII(BlackOilReservoirSimulation* MySim);
+
+
+/* These routines are meant for reading and writing out variables to Valiant */
+extern PetscErrorCode DefiantBlackOil2PhValiantLoadVecs(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantBlackOil3PhValiantLoadVecs(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantBlackOil2PhValiantWriteVecs(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantBlackOil3PhValiantWriteVecs(BlackOilReservoirSimulation* MySim);
 
 #endif /* DEFIANT_H_ */

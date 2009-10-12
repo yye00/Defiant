@@ -810,149 +810,149 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
         if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz  - 1) {
         } else if (ABS(LocalFlowMask[k][j][i]-FLUID_FLOW) < EPSILON) {
           /* in the x1 direction */
-          if (i == 1 || mx -i == 2){  /* if I am the point right next to the physical boundary */
-            if (i  == 1  ) {
+          if ( i == 1 || mx -i == 2 ){  /* if I am the point right next to the physical boundary */
+            if ( i  == 1 ) {
               LocalRelPermox1m[k][j][i] = 0.0;
               LocalRelPermwx1m[k][j][i] = 0.0;
               LocalRelPermgx1m[k][j][i] = 0.0;
-              if (xs+xm -i > 2)
+              if ( xs + xm - i > 2 )
               {
                 DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
                 else
                   LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
 
                 DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
                 else
                   LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
 
                 DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
                 else
                   LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
               }
             }
-            if (mx - i == 2) {
+            if ( mx - i == 2 ) {
               LocalRelPermox1p[k][j][i] = 0.0;
               LocalRelPermwx1p[k][j][i] = 0.0;
               LocalRelPermgx1p[k][j][i] = 0.0;
-              if ( i - xs > 1) {
+              if ( i - xs > 1 ) {
                 DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
                 else
                   LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
 
                 DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
                 else
                   LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
 
                 DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
                 else
                   LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
               }
             }
           }
-          else if (i == 2 || i == mx - 3 ) { /* else if I am the point next to next to a physical boundary */
+          else if ( i == 2 || i == mx - 3 ) { /* else if I am the point next to next to a physical boundary */
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
             else
               LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
             else
               LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
             else
               LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
 
             DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
 
             DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
 
             DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
           }
-          else if ((i == xs && xs != 0 ) || (i == xs+xm -1 && xs+xm-1 != mx-1 )){ /* else if I am the first and last point next to a ghost zone */
+          else if (( i == xs && xs != 0 ) || ( i == xs + xm - 1 && xs + xm - 1 != mx - 1 )){ /* else if I am the first and last point next to a ghost zone */
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1m[k][j][i] = LocalKro[k][j][i - 1];
             else
               LocalRelPermox1m[k][j][i] = LocalKro[k][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i - 1];
             else
               LocalRelPermwx1m[k][j][i] = LocalKrw[k][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i - 1];
             else
               LocalRelPermgx1m[k][j][i] = LocalKrg[k][j][i];
 
             DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox1p[k][j][i] = LocalKro[k][j][i + 1];
 
             DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx1p[k][j][i] = LocalKrw[k][j][i + 1];
 
             DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx1p[k][j][i] = LocalKrg[k][j][i + 1];
           }
-          else if (i - xs > 1 && xs + xm - i > 2) {
+          else if ( i - xs > 1 && xs + xm - i > 2 ) {
             Beta = 0.5 * Localh1[k][j][i - 1] / (Localx1[k][j][i - 1] - Localx1[k][j][i - 2]);
             BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i + 1] - Localx1[k][j][i]);
 
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1m[k][j][i] = (1 + Beta) * LocalKro[k][j][i - 1] - Beta * LocalKro[k][j][i - 2];
             else
               LocalRelPermox1m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j][i + 1];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1m[k][j][i] = (1 + Beta) * LocalKrw[k][j][i - 1] - Beta * LocalKrw[k][j][i - 2];
             else
               LocalRelPermwx1m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j][i + 1];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1m[k][j][i] = (1 + Beta) * LocalKrg[k][j][i - 1] - Beta * LocalKrg[k][j][i - 2];
             else
               LocalRelPermgx1m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j][i + 1];
@@ -961,41 +961,41 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
             BetaPrime = 0.5 * Localh1[k][j][i + 1] / (Localx1[k][j][i + 2] - Localx1[k][j][i + 1]);
 
             DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j][i - 1];
             else
               LocalRelPermox1p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i + 1] - BetaPrime * LocalKro[k][j][i + 2];
 
             DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j][i - 1];
             else
               LocalRelPermwx1p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i + 1] - BetaPrime * LocalKrw[k][j][i + 2];
 
             DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j][i - 1];
             else
               LocalRelPermgx1p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i + 1] - BetaPrime * LocalKrg[k][j][i + 2];
           }
-          else if ((i - xs > 0 && xs != 0) || (xs + xm - i > 1 && xs + xm != mx)) {
+          else if (( i - xs > 0 && xs != 0 ) || ( xs + xm - i > 1 && xs + xm != mx )) {
             Beta = 0.5 * Localh1[k][j][i - 1] / (Localx1[k][j][i - 1] - Localx1[k][j][i - 2]);
             BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i + 1] - Localx1[k][j][i]);
 
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j][i - 1] - MySim->GravAcc * LocalRhoox1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1m[k][j][i] = (1 + Beta) * LocalKro[k][j][i - 1] - Beta * LocalKro[k][j][i - 2];
             else
               LocalRelPermox1m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j][i + 1];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j][i - 1] - MySim->GravAcc * LocalRhowx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1m[k][j][i] = (1 + Beta) * LocalKrw[k][j][i - 1] - Beta * LocalKrw[k][j][i - 2];
             else
               LocalRelPermwx1m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j][i + 1];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j][i - 1] - MySim->GravAcc * LocalRhogx1m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j][i - 1]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1m[k][j][i] = (1 + Beta) * LocalKrg[k][j][i - 1] - Beta * LocalKrg[k][j][i - 2];
             else
               LocalRelPermgx1m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j][i + 1];
@@ -1004,447 +1004,456 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
             BetaPrime = 0.5 * Localh1[k][j][i + 1] / (Localx1[k][j][i + 2] - Localx1[k][j][i + 1]);
 
             DeltaPot = LocalPo[k][j][i + 1] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox1p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j][i - 1];
             else
               LocalRelPermox1p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i + 1] - BetaPrime * LocalKro[k][j][i + 2];
 
             DeltaPot = LocalPw[k][j][i + 1] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx1p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j][i - 1];
             else
               LocalRelPermwx1p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i + 1] - BetaPrime * LocalKrw[k][j][i + 2];
 
             DeltaPot = LocalPg[k][j][i + 1] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx1p[k][j][i] * (Localx3[k][j][i + 1] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx1p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j][i - 1];
             else
               LocalRelPermgx1p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i + 1] - BetaPrime * LocalKrg[k][j][i + 2];
           }
+
           /* in the x2 direction */
-          if (j == 1 || my -j == 2){  /* if I am the point right next to the physical boundary */
-            if (j  == 1  ) {
+          if ( j == 1 || my -j == 2 ){  /* if I am the point right next to the physical boundary */
+            if ( j  == 1 ) {
               LocalRelPermox2m[k][j][i] = 0.0;
               LocalRelPermwx2m[k][j][i] = 0.0;
               LocalRelPermgx2m[k][j][i] = 0.0;
-              if (ys+ym -j > 2)
+              if ( ys + ym - j > 2 )
               {
                 DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
                 else
                   LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
 
                 DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
                 else
                   LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
 
                 DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
                 else
                   LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
               }
             }
-            if (my - j == 2) {
+            if ( my - j == 2 ) {
               LocalRelPermox2p[k][j][i] = 0.0;
               LocalRelPermwx2p[k][j][i] = 0.0;
               LocalRelPermgx2p[k][j][i] = 0.0;
-              if ( j - ys > 1) {
+              if ( j - ys > 1 ) {
                 DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
                 else
                   LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
 
                 DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
                 else
                   LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
 
                 DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
                 else
                   LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
               }
             }
           }
-          else if (j == 2 || j == my - 3 ) { /* else if I am the point next to next to a physical boundary */
+          else if ( j == 2 || j == my - 3 ) { /* else if I am the point next to next to a physical boundary */
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
             else
               LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
             else
               LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
             else
               LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
 
             DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
 
             DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
 
             DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
           }
-          else if ((j == ys && ys != 0 ) || (j == ys+ym -1 && ys+ym-1 != my-1 )){ /* else if I am the first and last point next to a ghost zone */
+          else if (( j == ys && ys != 0 ) || ( j == ys + ym - 1 && ys + ym - 1 != my - 1 )){ /* else if I am the first and last point next to a ghost zone */
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2m[k][j][i] = LocalKro[k][j - 1][i];
             else
               LocalRelPermox2m[k][j][i] = LocalKro[k][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2m[k][j][i] = LocalKrw[k][j - 1][i];
             else
               LocalRelPermwx2m[k][j][i] = LocalKrw[k][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2m[k][j][i] = LocalKrg[k][j - 1][i];
             else
               LocalRelPermgx2m[k][j][i] = LocalKrg[k][j][i];
 
             DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox2p[k][j][i] = LocalKro[k][j + 1][i];
 
             DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx2p[k][j][i] = LocalKrw[k][j + 1][i];
 
             DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx2p[k][j][i] = LocalKrg[k][j + 1][i];
           }
-          else if (j - ys > 1 && ys + ym - j > 2) {
-            Beta = 0.5 * Localh1[k][j - 1][i] / (Localx1[k][j - 1][i] - Localx1[k][j - 2][i]);
-            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j + 1][i] - Localx1[k][j][i]);
+          else if ( j - ys > 1 && ys + ym - j > 2 ) {
+            Beta = 0.5 * Localh2[k][j - 1][i] / (Localx2[k][j - 1][i] - Localx2[k][j - 2][i]);
+            BetaPrime = 0.5 * Localh2[k][j][i] / (Localx2[k][j + 1][i] - Localx2[k][j][i]);
 
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2m[k][j][i] = (1 + Beta) * LocalKro[k][j - 1][i] - Beta * LocalKro[k][j - 2][i];
             else
               LocalRelPermox2m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j + 1][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2m[k][j][i] = (1 + Beta) * LocalKrw[k][j - 1][i] - Beta * LocalKrw[k][j - 2][i];
             else
               LocalRelPermwx2m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j + 1][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2m[k][j][i] = (1 + Beta) * LocalKrg[k][j - 1][i] - Beta * LocalKrg[k][j - 2][i];
             else
               LocalRelPermgx2m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j + 1][i];
 
-            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j - 1][i]);
-            BetaPrime = 0.5 * Localh1[k][j + 1][i] / (Localx1[k][j + 2][i] - Localx1[k][j + 1][i]);
+            Beta = 0.5 * Localh2[k][j][i] / (Localx2[k][j][i] - Localx2[k][j - 1][i]);
+            BetaPrime = 0.5 * Localh2[k][j + 1][i] / (Localx2[k][j + 2][i] - Localx2[k][j + 1][i]);
 
             DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j - 1][i];
             else
               LocalRelPermox2p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j + 1][i] - BetaPrime * LocalKro[k][j + 2][i];
 
             DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j - 1][i];
             else
               LocalRelPermwx2p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j + 1][i] - BetaPrime * LocalKrw[k][j + 2][i];
 
             DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j - 1][i];
             else
               LocalRelPermgx2p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j + 1][i] - BetaPrime * LocalKrg[k][j + 2][i];
           }
-          else if ((j - ys > 0 && ys != 0) || (ys + ym - j > 1 && ys + ym != my)) {
-            Beta = 0.5 * Localh1[k][j - 1][i] / (Localx1[k][j - 1][i] - Localx1[k][j - 2][i]);
-            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k][j + 1][i] - Localx1[k][j][i]);
+          else if (( j - ys > 0 && ys != 0 ) || ( ys + ym - j > 1 && ys + ym != my )) {
+            Beta = 0.5 * Localh2[k][j - 1][i] / (Localx2[k][j - 1][i] - Localx2[k][j - 2][i]);
+            BetaPrime = 0.5 * Localh2[k][j][i] / (Localx2[k][j + 1][i] - Localx2[k][j][i]);
 
             DeltaPot = LocalPo[k][j][i] - LocalPo[k][j - 1][i] - MySim->GravAcc * LocalRhoox2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2m[k][j][i] = (1 + Beta) * LocalKro[k][j - 1][i] - Beta * LocalKro[k][j - 2][i];
             else
               LocalRelPermox2m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k][j + 1][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k][j - 1][i] - MySim->GravAcc * LocalRhowx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2m[k][j][i] = (1 + Beta) * LocalKrw[k][j - 1][i] - Beta * LocalKrw[k][j - 2][i];
             else
               LocalRelPermwx2m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k][j + 1][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k][j - 1][i] - MySim->GravAcc * LocalRhogx2m[k][j][i] * (Localx3[k][j][i] - Localx3[k][j - 1][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2m[k][j][i] = (1 + Beta) * LocalKrg[k][j - 1][i] - Beta * LocalKrg[k][j - 2][i];
             else
               LocalRelPermgx2m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k][j + 1][i];
 
-            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k][j - 1][i]);
-            BetaPrime = 0.5 * Localh1[k][j + 1][i] / (Localx1[k][j + 2][i] - Localx1[k][j + 1][i]);
+            Beta = 0.5 * Localh2[k][j][i] / (Localx2[k][j][i] - Localx2[k][j - 1][i]);
+            BetaPrime = 0.5 * Localh2[k][j + 1][i] / (Localx2[k][j + 2][i] - Localx2[k][j + 1][i]);
 
             DeltaPot = LocalPo[k][j + 1][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox2p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k][j - 1][i];
             else
               LocalRelPermox2p[k][j][i] = (1 + BetaPrime) * LocalKro[k][j + 1][i] - BetaPrime * LocalKro[k][j + 2][i];
 
             DeltaPot = LocalPw[k][j + 1][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx2p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k][j - 1][i];
             else
               LocalRelPermwx2p[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j + 1][i] - BetaPrime * LocalKrw[k][j + 2][i];
 
             DeltaPot = LocalPg[k][j + 1][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx2p[k][j][i] * (Localx3[k][j + 1][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx2p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k][j - 1][i];
             else
               LocalRelPermgx2p[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j + 1][i] - BetaPrime * LocalKrg[k][j + 2][i];
           }
+
           /* in the x3 direction */
-          if (k == 1 || mz -k == 2){  /* if I am the point right next to the phzsical boundary */
-            if (k  == 1  ) {
+          if ( k == 1 || mz -k == 2 ){  /* if I am the point right next to the physical boundary */
+            if ( k  == 1 ) {
               LocalRelPermox3m[k][j][i] = 0.0;
               LocalRelPermwx3m[k][j][i] = 0.0;
               LocalRelPermgx3m[k][j][i] = 0.0;
-              if (zs+zm -k > 2)
+              if ( zs + zm - k > 2 )
               {
                 DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
                 else
                   LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
 
                 DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
                 else
                   LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
 
                 DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
                 else
                   LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
               }
             }
-            if (mz - k == 2) {
+            if ( mz - k == 2 ) {
               LocalRelPermox3p[k][j][i] = 0.0;
               LocalRelPermwx3p[k][j][i] = 0.0;
               LocalRelPermgx3p[k][j][i] = 0.0;
-              if ( k - zs > 1) {
+              if ( k - zs > 1 ) {
                 DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
                 else
                   LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
 
                 DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
                 else
                   LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
 
                 DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-                if (DeltaPot < 0.0)
+                if ( DeltaPot < 0.0 )
                   LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
                 else
                   LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
               }
             }
           }
-          else if (k == 2 || k == mz - 3 ) { /* else if I am the point next to next to a phzsical boundary */
+          else if ( k == 2 || k == mz - 3 ) { /* else if I am the point next to next to a physical boundary */
             DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
             else
               LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
             else
               LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
             else
               LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
 
             DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
 
             DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
 
             DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
           }
-          else if ((k == zs && zs != 0 ) || (k == zs+zm -1 && zs+zm-1 != mz-1 )){ /* else if I am the first and last point next to a ghost zone */
+          else if (( k == zs && zs != 0 ) || ( k == zs + zm - 1 && zs + zm - 1 != mz - 1 )){ /* else if I am the first and last point next to a ghost zone */
             DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3m[k][j][i] = LocalKro[k - 1][j][i];
             else
               LocalRelPermox3m[k][j][i] = LocalKro[k][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3m[k][j][i] = LocalKrw[k - 1][j][i];
             else
               LocalRelPermwx3m[k][j][i] = LocalKrw[k][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3m[k][j][i] = LocalKrg[k - 1][j][i];
             else
               LocalRelPermgx3m[k][j][i] = LocalKrg[k][j][i];
 
             DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3p[k][j][i] = LocalKro[k][j][i];
             else
               LocalRelPermox3p[k][j][i] = LocalKro[k + 1][j][i];
 
             DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3p[k][j][i] = LocalKrw[k][j][i];
             else
               LocalRelPermwx3p[k][j][i] = LocalKrw[k + 1][j][i];
 
             DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3p[k][j][i] = LocalKrg[k][j][i];
             else
               LocalRelPermgx3p[k][j][i] = LocalKrg[k + 1][j][i];
           }
-          else if (k - zs > 1 && zs + zm - k > 2) {
-            Beta = 0.5 * Localh1[k - 1][j][i] / (Localx1[k - 1][j][i] - Localx1[k - 2][j][i]);
-            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k + 1][j][i] - Localx1[k][j][i]);
+          else if ( k - zs > 1 && zs + zm - k > 2 ) {
+            Beta = 0.5 * Localh3[k - 1][j][i] / (Localx3[k - 1][j][i] - Localx3[k - 2][j][i]);
+            BetaPrime = 0.5 * Localh3[k][j][i] / (Localx3[k + 1][j][i] - Localx3[k][j][i]);
 
             DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3m[k][j][i] = (1 + Beta) * LocalKro[k - 1][j][i] - Beta * LocalKro[k - 2][j][i];
             else
               LocalRelPermox3m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k + 1][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3m[k][j][i] = (1 + Beta) * LocalKrw[k - 1][j][i] - Beta * LocalKrw[k - 2][j][i];
             else
               LocalRelPermwx3m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k + 1][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3m[k][j][i] = (1 + Beta) * LocalKrg[k - 1][j][i] - Beta * LocalKrg[k - 2][j][i];
             else
               LocalRelPermgx3m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k + 1][j][i];
 
-            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k - 1][j][i]);
-            BetaPrime = 0.5 * Localh1[k + 1][j][i] / (Localx1[k + 2][j][i] - Localx1[k + 1][j][i]);
+            Beta = 0.5 * Localh3[k][j][i] / (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            BetaPrime = 0.5 * Localh3[k + 1][j][i] / (Localx3[k + 2][j][i] - Localx3[k + 1][j][i]);
 
             DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k - 1][j][i];
             else
               LocalRelPermox3p[k][j][i] = (1 + BetaPrime) * LocalKro[k + 1][j][i] - BetaPrime * LocalKro[k + 2][j][i];
 
             DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k - 1][j][i];
             else
               LocalRelPermwx3p[k][j][i] = (1 + BetaPrime) * LocalKrw[k + 1][j][i] - BetaPrime * LocalKrw[k + 2][j][i];
 
             DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k - 1][j][i];
             else
               LocalRelPermgx3p[k][j][i] = (1 + BetaPrime) * LocalKrg[k + 1][j][i] - BetaPrime * LocalKrg[k + 2][j][i];
           }
-          else if ((k - zs > 0 && zs != 0) || (zs + zm - k > 1 && zs + zm != mz)) {
-            Beta = 0.5 * Localh1[k - 1][j][i] / (Localx1[k - 1][j][i] - Localx1[k - 2][j][i]);
-            BetaPrime = 0.5 * Localh1[k][j][i] / (Localx1[k + 1][j][i] - Localx1[k][j][i]);
+          else if (( k - zs > 0 && zs != 0 ) || ( zs + zm - k > 1 && zs + zm != mz )) {
+            Beta = 0.5 * Localh3[k - 1][j][i] / (Localx3[k - 1][j][i] - Localx3[k - 2][j][i]);
+            BetaPrime = 0.5 * Localh3[k][j][i] / (Localx3[k + 1][j][i] - Localx3[k][j][i]);
 
             DeltaPot = LocalPo[k][j][i] - LocalPo[k - 1][j][i] - MySim->GravAcc * LocalRhoox3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3m[k][j][i] = (1 + Beta) * LocalKro[k - 1][j][i] - Beta * LocalKro[k - 2][j][i];
             else
               LocalRelPermox3m[k][j][i] = (1 + BetaPrime) * LocalKro[k][j][i] - BetaPrime * LocalKro[k + 1][j][i];
 
             DeltaPot = LocalPw[k][j][i] - LocalPw[k - 1][j][i] - MySim->GravAcc * LocalRhowx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3m[k][j][i] = (1 + Beta) * LocalKrw[k - 1][j][i] - Beta * LocalKrw[k - 2][j][i];
             else
               LocalRelPermwx3m[k][j][i] = (1 + BetaPrime) * LocalKrw[k][j][i] - BetaPrime * LocalKrw[k + 1][j][i];
 
             DeltaPot = LocalPg[k][j][i] - LocalPg[k - 1][j][i] - MySim->GravAcc * LocalRhogx3m[k][j][i] * (Localx3[k][j][i] - Localx3[k - 1][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3m[k][j][i] = (1 + Beta) * LocalKrg[k - 1][j][i] - Beta * LocalKrg[k - 2][j][i];
             else
               LocalRelPermgx3m[k][j][i] = (1 + BetaPrime) * LocalKrg[k][j][i] - BetaPrime * LocalKrg[k + 1][j][i];
 
-            Beta = 0.5 * Localh1[k][j][i] / (Localx1[k][j][i] - Localx1[k - 1][j][i]);
-            BetaPrime = 0.5 * Localh1[k + 1][j][i] / (Localx1[k + 2][j][i] - Localx1[k + 1][j][i]);
+            Beta = 0.5 * Localh3[k][j][i] / (Localx3[k][j][i] - Localx3[k - 1][j][i]);
+            BetaPrime = 0.5 * Localh3[k + 1][j][i] / (Localx3[k + 2][j][i] - Localx3[k + 1][j][i]);
 
             DeltaPot = LocalPo[k + 1][j][i] - LocalPo[k][j][i] - MySim->GravAcc * LocalRhoox3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermox3p[k][j][i] = (1 + Beta) * LocalKro[k][j][i] - Beta * LocalKro[k - 1][j][i];
             else
               LocalRelPermox3p[k][j][i] = (1 + BetaPrime) * LocalKro[k + 1][j][i] - BetaPrime * LocalKro[k + 2][j][i];
 
             DeltaPot = LocalPw[k + 1][j][i] - LocalPw[k][j][i] - MySim->GravAcc * LocalRhowx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermwx3p[k][j][i] = (1 + Beta) * LocalKrw[k][j][i] - Beta * LocalKrw[k - 1][j][i];
             else
               LocalRelPermwx3p[k][j][i] = (1 + BetaPrime) * LocalKrw[k + 1][j][i] - BetaPrime * LocalKrw[k + 2][j][i];
 
             DeltaPot = LocalPg[k + 1][j][i] - LocalPg[k][j][i] - MySim->GravAcc * LocalRhogx3p[k][j][i] * (Localx3[k + 1][j][i] - Localx3[k][j][i]);
-            if (DeltaPot < 0.0)
+            if ( DeltaPot < 0.0 )
               LocalRelPermgx3p[k][j][i] = (1 + Beta) * LocalKrg[k][j][i] - Beta * LocalKrg[k - 1][j][i];
             else
               LocalRelPermgx3p[k][j][i] = (1 + BetaPrime) * LocalKrg[k + 1][j][i] - BetaPrime * LocalKrg[k + 2][j][i];
           }
+          /* Now we override based on the flow mask */
+          if (LocalFlowMask[k][j][i-1] == NO_FLUID_FLOW) {LocalRelPermox1m[i][j][k]=0.0;LocalRelPermwx1m[i][j][k]=0.0;LocalRelPermgx1m[i][j][k]=0.0;}
+          if (LocalFlowMask[k][j][i+1] == NO_FLUID_FLOW) {LocalRelPermox1p[i][j][k]=0.0;LocalRelPermwx1p[i][j][k]=0.0;LocalRelPermgx1p[i][j][k]=0.0;}
+          if (LocalFlowMask[k][j-1][i] == NO_FLUID_FLOW) {LocalRelPermox2m[i][j][k]=0.0;LocalRelPermwx2m[i][j][k]=0.0;LocalRelPermgx2m[i][j][k]=0.0;}
+          if (LocalFlowMask[k][j+1][i] == NO_FLUID_FLOW) {LocalRelPermox2p[i][j][k]=0.0;LocalRelPermwx2p[i][j][k]=0.0;LocalRelPermgx2p[i][j][k]=0.0;}
+          if (LocalFlowMask[k-1][j][i] == NO_FLUID_FLOW) {LocalRelPermox3m[i][j][k]=0.0;LocalRelPermwx3m[i][j][k]=0.0;LocalRelPermgx3m[i][j][k]=0.0;}
+          if (LocalFlowMask[k+1][j][i] == NO_FLUID_FLOW) {LocalRelPermox3p[i][j][k]=0.0;LocalRelPermwx3p[i][j][k]=0.0;LocalRelPermgx3p[i][j][k]=0.0;}
         }
 
         if (LocalRelPermox1m[k][j][i] < 0.0) LocalRelPermox1m[k][j][i] = 0.0;

@@ -750,7 +750,10 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   ierr = VecMax(TempDSDT, &TempInt, &MySim->DSDTmax);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "\nMaximum DSDTmax is:%f \n", MySim->DSDTmax);CHKERRQ(ierr);
   /* Compute the desired Delta T and set it to the simulation DeltaT */
-  MySim->DeltaTS = MySim->DSmax/MySim->DSDTmax;
+  /* Check if we are doing adaptive time-step IMPES */
+  if(MySim->AdaptiveTimeStep==PETSC_TRUE)
+    MySim->DeltaTS = MySim->DSmax/MySim->DSDTmax;
+
   if (ABS(MySim->DSmax) < EPSILON) MySim->DeltaTS = MySim->DeltaTP;
 
   /* Now perform the proper update */
@@ -832,7 +835,7 @@ extern PetscErrorCode DefiantIMPES2PhSolve(BlackOilReservoirSimulation* MySim)
   ierr = MatMult(MySim->A, MySim->Po, TempVec);CHKERRQ(ierr);CHKMEMQ;
   ierr = VecAXPY(TempVec, -1.0, MySim->RHS);CHKERRQ(ierr);CHKMEMQ;
   ierr = VecNorm(TempVec, NORM_2, &norm);CHKERRQ(ierr);CHKMEMQ;
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Residual norm %G\n", norm);CHKERRQ(ierr);CHKMEMQ;
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Residual L-2 norm is: %G\n", norm);CHKERRQ(ierr);CHKMEMQ;
 
   PetscFunctionReturn(0);
 }
@@ -983,7 +986,7 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     /* Now w eare ready to update the saturations using improved IMPES */
     MySim->CurrentTimeS = MySim->CurrentTimeP;
 
-    while(MySim->CurrentTimeS < MySim->CurrentTimeP + MySim->DeltaTP)
+    while(MySim->CurrentTimeS <= MySim->CurrentTimeP + MySim->DeltaTP)
     {
       ierr = DefiantIMPES2PhUpdateSaturations(MySim);CHKERRQ(ierr);CHKMEMQ;
       /* update saturation based properties */
@@ -1038,9 +1041,6 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
       ierr = PetscPrintf(PETSC_COMM_WORLD,"Sw is: ");
       ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
 #endif
-
-      /* Check if we are doing adaptive time-step IMPES */
-      if(MySim->AdaptiveTimeStep==PETSC_FALSE) break;
 
     }
 
