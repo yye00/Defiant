@@ -104,7 +104,7 @@ extern PetscErrorCode DefiantBlackOil3PhValiantLoadVecs(BlackOilReservoirSimulat
 extern PetscErrorCode DefiantBlackOil2PhValiantWriteVecs(BlackOilReservoirSimulation* MySim)
 {
   PetscErrorCode ierr;
-  PetscInt i, TempInt, ObsSize, WellID, PerfID;
+  PetscInt i, ObsSize, WellID, PerfID;
   Vec ObsVec;
   PetscViewer viewer;
   Vec TempVec;
@@ -148,13 +148,19 @@ extern PetscErrorCode DefiantBlackOil2PhValiantWriteVecs(BlackOilReservoirSimula
 
   /* Now for the actual observations */
   /* Make sure we are sync'ed before we write the observations */
-  ierr = DefiantBlackOilComputePerfIndicesSyncPerfs(MySim);CHKERRQ(ierr);CHKMEMQ;
-  /* Find out how many perforations are there */
+  ierr = DefiantBlackOil2PhProduction(MySim);CHKERRQ(ierr);CHKMEMQ;
+  /* Find out how big the observations vector is */
   i=0;
   for (WellID=0;WellID<MySim->NumberOfWells;WellID++)
     for (PerfID=0;PerfID<MySim->Wells[WellID].NumberOfPerforations;PerfID++)
-      i++;
-  ObsSize = i*2*2; /* 2 phases, flow rate and Bhp per phase */
+    {
+      if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == BHP_CONSTRAINT ||
+           MySim->Wells[WellID].Perforations[PerfID].Constraint == FLOW_RATE_CONSTRAINT )
+        i = i + 4;
+      else if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == MONITORING )
+        i = i + 2;
+    }
+  ObsSize = i; /* 2 phases, flow rate and Bhp per phase OR pressure and saturation*/
 
   /* Now we have everything on proc zero, it outputs the observations vector */
   ierr = VecCreate(PETSC_COMM_WORLD, &ObsVec);CHKERRQ(ierr);CHKMEMQ;
@@ -164,15 +170,17 @@ extern PetscErrorCode DefiantBlackOil2PhValiantWriteVecs(BlackOilReservoirSimula
   for (WellID=0;WellID<MySim->NumberOfWells;WellID++)
     for (PerfID=0;PerfID<MySim->Wells[WellID].NumberOfPerforations;PerfID++)
     {
-      TempInt = i;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].Qo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 1;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].Qw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 2;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].BHPo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 3;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].BHPw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      i = i + 4;
+      if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == BHP_CONSTRAINT ||
+           MySim->Wells[WellID].Perforations[PerfID].Constraint == FLOW_RATE_CONSTRAINT )
+      {
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Qo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Qw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+      } else if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == MONITORING )  {
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Po, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].So, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+      }
     }
 
   ierr = VecAssemblyBegin(ObsVec);CHKERRQ(ierr);CHKMEMQ;
@@ -192,7 +200,7 @@ extern PetscErrorCode DefiantBlackOil2PhValiantWriteVecs(BlackOilReservoirSimula
 extern PetscErrorCode DefiantBlackOil3PhValiantWriteVecs(BlackOilReservoirSimulation* MySim)
 {
   PetscErrorCode ierr;
-  PetscInt i, TempInt, ObsSize, WellID, PerfID;
+  PetscInt i, ObsSize, WellID, PerfID;
   Vec ObsVec;
   PetscViewer viewer;
   Vec TempVec;
@@ -246,13 +254,19 @@ extern PetscErrorCode DefiantBlackOil3PhValiantWriteVecs(BlackOilReservoirSimula
 
   /* Now for the actual observations */
   /* Make sure we are sync'ed before we write the observations */
-  ierr = DefiantBlackOilComputePerfIndicesSyncPerfs(MySim);CHKERRQ(ierr);CHKMEMQ;
-  /* Find out how many perforations are there */
+  ierr = DefiantBlackOil3PhProduction(MySim);CHKERRQ(ierr);CHKMEMQ;
+  /* Find out how big the observations vector is */
   i=0;
   for (WellID=0;WellID<MySim->NumberOfWells;WellID++)
     for (PerfID=0;PerfID<MySim->Wells[WellID].NumberOfPerforations;PerfID++)
-      i++;
-  ObsSize = i*3*2; /* 3 phases, flow rate and Bhp per phase */
+    {
+      if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == BHP_CONSTRAINT ||
+           MySim->Wells[WellID].Perforations[PerfID].Constraint == FLOW_RATE_CONSTRAINT )
+        i = i + 6;
+      else if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == MONITORING )
+        i = i + 4;
+    }
+  ObsSize = i; /* 3 phases, flow rate and Bhp per phase OR pressure and saturation for 2 phases */
 
   /* Now we have everything on proc zero, it outputs the observations vector */
   ierr = VecCreate(PETSC_COMM_WORLD, &ObsVec);CHKERRQ(ierr);CHKMEMQ;
@@ -262,19 +276,21 @@ extern PetscErrorCode DefiantBlackOil3PhValiantWriteVecs(BlackOilReservoirSimula
   for (WellID=0;WellID<MySim->NumberOfWells;WellID++)
     for (PerfID=0;PerfID<MySim->Wells[WellID].NumberOfPerforations;PerfID++)
     {
-      TempInt = i;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].Qo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 1;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].Qw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 2;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].Qg, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 3;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].BHPo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 4;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].BHPw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      TempInt = i + 5;
-      ierr = VecSetValues(ObsVec, 1, &TempInt, &MySim->Wells[WellID].Perforations[PerfID].BHPg, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;
-      i = i + 6;
+      if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == BHP_CONSTRAINT ||
+           MySim->Wells[WellID].Perforations[PerfID].Constraint == FLOW_RATE_CONSTRAINT )
+      {
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Qo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Qw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Qg, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPg, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+      } else if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == MONITORING )  {
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Po, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].So, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Pw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Sw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+      }
     }
 
   ierr = VecAssemblyBegin(ObsVec);CHKERRQ(ierr);CHKMEMQ;

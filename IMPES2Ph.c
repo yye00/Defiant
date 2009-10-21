@@ -238,7 +238,7 @@ extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation*
         row.k = k;
         if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz
             - 1) {
-          v[0] = 1.0;
+          v[0] = 0.0;
           ierr = MatSetValuesStencil(MySim->A, 1, &row, 1, &row, v,
               INSERT_VALUES);
           CHKERRQ(ierr);
@@ -850,6 +850,9 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
   /* Now we start */
   MySim->CurrentTimeP = MySim->StartTime;
   MySim->CurrentTimeS = MySim->StartTime;
+
+  /* Before we start iterating sync the location of the wells */
+  ierr = DefiantBlackOilSyncPerfOwners(MySim);CHKERRQ(ierr);CHKMEMQ;
 
   /* compute some geometric and static factors*/
   ierr = DefiantComputeKAByHAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;

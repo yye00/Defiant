@@ -20,7 +20,8 @@ int main(int argc, char **argv) {
   /* Initialize PETSc */
   PetscInitialize(&argc, &argv, (char *) 0, help);
 
-  ierr = DefiantIMPES2PhFivePoint();CHKERRQ(ierr);
+  ierr = DefiantIMPES2PhBuckleyLeverett();CHKERRQ(ierr);
+  //ierr = DefiantIMPES2PhFivePoint();CHKERRQ(ierr);
   //ierr = TestIterate();CHKERRQ(ierr);
 
   ierr = PetscFinalize();CHKERRQ(ierr);

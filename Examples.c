@@ -181,7 +181,7 @@ extern PetscErrorCode DefiantIMPES2PhFivePoint()
   ierr = VecSet(FivePoint.FlowMask, FLUID_FLOW);CHKERRQ(ierr);CHKMEMQ;
 
   /* Set the coordinates */
-  ierr = DASetUniformCoordinates(FivePoint.SimDA, 0.0, 90.0, 0.0, 90.0, 0.0, 2.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DASetUniformCoordinates(FivePoint.SimDA, 0.0, 180.0, 0.0, 180.0, 0.0, 2.0);CHKERRQ(ierr);CHKMEMQ;
   ierr = DefiantGetDACoords(&FivePoint);CHKERRQ(ierr);CHKMEMQ;
   /* set some geometry */
   ierr = VecSet(FivePoint.A1, 10.0);CHKERRQ(ierr);CHKMEMQ;
@@ -257,8 +257,8 @@ extern PetscErrorCode DefiantIMPES2PhFivePoint()
   FivePoint.Wells[0].Perforations[0].zbh = 0.0;
 
   /* Set information for well zero,the producer */
-  FivePoint.Wells[1].Perforations[0].I = 8;
-  FivePoint.Wells[1].Perforations[0].J = 8;
+  FivePoint.Wells[1].Perforations[0].I = 18;
+  FivePoint.Wells[1].Perforations[0].J = 18;
   FivePoint.Wells[1].Perforations[0].K = 1;
   FivePoint.Wells[1].Perforations[0].BHPw = 3999;
   FivePoint.Wells[1].Perforations[0].BHPo = 3999;

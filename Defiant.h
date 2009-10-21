@@ -59,15 +59,16 @@ extern PetscErrorCode DefiantTableYFromX(DefiantTable *MyTable, PetscReal *X, Pe
 /* Well constraint type */
 #define BHP_CONSTRAINT       1707
 #define FLOW_RATE_CONSTRAINT 1708
+#define MONITORING           1709
 
 /* Well types */
-#define OIL_INJECTOR         1709
-#define WATER_INJECTOR       1710
-#define GAS_INJECTOR         1711
-#define OIL_PRODUCER         1712
-#define WATER_PRODUCER       1713
-#define GAS_PRODUCER         1714
-#define PRODUCER             1715
+#define OIL_INJECTOR         1710
+#define WATER_INJECTOR       1711
+#define GAS_INJECTOR         1712
+#define OIL_PRODUCER         1713
+#define WATER_PRODUCER       1714
+#define GAS_PRODUCER         1715
+#define PRODUCER             1716
 
 typedef struct {
   /* Global DA indices */
@@ -96,6 +97,7 @@ typedef struct {
   PetscReal Rw;    /* radius at perforation */
   PetscReal S;     /* Skin at perforation */
   /* Other perforation properties */
+  PetscScalar So, Sw, Sg;
   PetscScalar Po, Pw, Pg;
   PetscScalar Kro, Krw, Krg;
   PetscScalar Muo, Muw, Mug;
@@ -104,6 +106,8 @@ typedef struct {
   PetscScalar Bo, Bw, Bg;
   PetscScalar x1, x2, x3;
   PetscScalar h1, h2, h3;
+  /* Owner core, need this for parallel */
+  PetscInt OwnerRank;
 } Perforation;
 
 typedef struct {
@@ -378,8 +382,10 @@ extern PetscErrorCode DefiantComputeKrow(PetscScalar * Krow, PetscScalar Sw);
 extern PetscErrorCode DefiantComputeKrog(PetscScalar * Krog, PetscScalar Sg);
 
 /* Production functions for BlackOil */
+extern PetscErrorCode DefiantBlackOilSyncPerfOwners(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantBlackOilComputePerfIndicesSyncPerfs(BlackOilReservoirSimulation* MySim);
-extern PetscErrorCode DefiantBlackOilProduction(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantBlackOil2PhProduction(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantBlackOil3PhProduction(BlackOilReservoirSimulation* MySim);
 
 /* Well handling and book-keeping functions */
 extern PetscErrorCode DefiantAddPerforation(Well *MyWell);
