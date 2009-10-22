@@ -168,8 +168,6 @@ extern PetscErrorCode DefiantNewton3PhBuckleyLeverett();
 extern PetscErrorCode DefiantIMPES2PhFivePoint()
 {
   PetscErrorCode ierr;
-  PetscViewer viewer;
-
   BlackOilReservoirSimulation FivePoint;
 
   PetscFunctionBegin;
@@ -325,3 +323,142 @@ extern PetscErrorCode DefiantNewton2PhFivePoint(BlackOilReservoirSimulation* MyS
 #undef __FUNCT__
 #define __FUNCT__ "DefiantNewton3PhFivePoint"
 extern PetscErrorCode DefiantNewton3PhFivePoint(BlackOilReservoirSimulation* MySim);
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantIMPES2PhBenchmark"
+extern PetscErrorCode DefiantIMPES2PhBenchmark()
+{
+  PetscErrorCode ierr;
+  PetscInt mx, my, mz, xm, ym, zm, xs, ys, zs;
+  BlackOilReservoirSimulation Benchmark;
+
+  PetscFunctionBegin;
+  /* Initialize the simulation */
+  ierr = DefiantCreateSimulationVecs(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DefiantCreate2PhIMPESSystem(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+
+  /* Set FlowMask */
+  ierr = VecSet(Benchmark.FlowMask, FLUID_FLOW);CHKERRQ(ierr);CHKMEMQ;
+
+  /* Set the coordinates */
+  ierr = DASetUniformCoordinates(Benchmark.SimDA, 0.0, 90.0, 0.0, 2.0, 0.0, 2.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DefiantGetDACoords(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+  /* Get dimensions and extents of the local vectors */
+  ierr = DAGetInfo(Benchmark.SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
+  ierr = DAGetCorners(Benchmark.SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
+  /* set some geometry */
+  ierr = VecSet(Benchmark.A1, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.A2, 10.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.A3, 10.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.h1, 10.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.h2, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.h3, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  /* set initial values to vectors */
+  ierr = VecSet(Benchmark.Po, 4000.0);CHKERRQ(ierr);CHKMEMQ;
+  /* set residual oil and connate water */
+  Benchmark.Sor = 0.2;
+  Benchmark.Swc = 0.2;
+  /* Set saturations */
+  ierr = VecSet(Benchmark.So, 1.0-0.2 );CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.Sw, 0.2 );CHKERRQ(ierr);CHKMEMQ;
+  /* Set densities */
+  Benchmark.Rhoos = 1.0;
+  Benchmark.Rhows = 1.0;
+  ierr = VecSet(Benchmark.Rhoo, Benchmark.Rhoos );CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.Rhow, Benchmark.Rhows );CHKERRQ(ierr);CHKMEMQ;
+  /* Set viscosities */
+  ierr = VecSet(Benchmark.Muo, 1);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.Muw, 1);CHKERRQ(ierr);CHKMEMQ;
+  /* Set permeabilities */
+  ierr = VecSet(Benchmark.K11, 300.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.K22, 300.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.K33, 300.0);CHKERRQ(ierr);CHKMEMQ;
+  /* set the relative permeabilities */
+  ierr = VecSet(Benchmark.Kro, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.Krw, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  /* Set the table for PcowSw */
+  Benchmark.PcowSw.NumberOfEntries = 2;
+  ierr = PetscMalloc(Benchmark.PcowSw.NumberOfEntries*sizeof(PetscScalar),&Benchmark.PcowSw.X);CHKERRQ(ierr);CHKMEMQ;
+  ierr = PetscMalloc(Benchmark.PcowSw.NumberOfEntries*sizeof(PetscScalar),&Benchmark.PcowSw.Y);CHKERRQ(ierr);CHKMEMQ;
+  Benchmark.PcowSw.X[0] = 0;Benchmark.PcowSw.X[1] = 0;
+  Benchmark.PcowSw.Y[0] = 0;Benchmark.PcowSw.Y[1] = 1;
+  /* Set the graviational acceleration */
+  Benchmark.GravAcc = 32.2;
+  /* Set the rock properties */
+  ierr = VecSet(Benchmark.Phi, 0.2);CHKERRQ(ierr);CHKMEMQ;
+  Benchmark.RockCompressibility = 1.0e-15;
+  Benchmark.RockCompRefPressure = 14.7;
+  Benchmark.RockCompRefPorosity = 0.3;
+  /* Set the fluid compressibilities */
+  Benchmark.OilCompressibility = 1.0e-5;
+  Benchmark.OilCompPressure = 14.7;
+  Benchmark.WaterCompressibility = 1.0e-5;
+  Benchmark.WaterCompPressure = 14.7;
+  /* FIXME Set the volume factors */
+  ierr = VecSet(Benchmark.Bo, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  ierr = VecSet(Benchmark.Bw, 1.0);CHKERRQ(ierr);CHKMEMQ;
+  /* Set the well information */
+  /* allocate wells */
+  Benchmark.NumberOfWells = 2;
+  ierr = PetscMalloc(Benchmark.NumberOfWells*sizeof(Well),&Benchmark.Wells);CHKERRQ(ierr);CHKMEMQ;
+  /* allocate perforations for wells */
+  Benchmark.Wells[0].NumberOfPerforations = 1;
+  ierr = PetscMalloc(Benchmark.Wells[0].NumberOfPerforations*sizeof(Perforation),&Benchmark.Wells[0].Perforations);CHKERRQ(ierr);CHKMEMQ;
+  Benchmark.Wells[1].NumberOfPerforations = 1;
+  ierr = PetscMalloc(Benchmark.Wells[1].NumberOfPerforations*sizeof(Perforation),&Benchmark.Wells[1].Perforations);CHKERRQ(ierr);CHKMEMQ;
+  /* Set information for well zero,the injector */
+  Benchmark.Wells[0].Perforations[0].I = 1;
+  Benchmark.Wells[0].Perforations[0].J = 1;
+  Benchmark.Wells[0].Perforations[0].K = 1;
+  Benchmark.Wells[0].Perforations[0].Qw = 1.0;
+  Benchmark.Wells[0].Perforations[0].Constraint = FLOW_RATE_CONSTRAINT;
+  Benchmark.Wells[0].Perforations[0].WellType = WATER_INJECTOR;
+  Benchmark.Wells[0].Perforations[0].IsActive = PETSC_TRUE;
+  Benchmark.Wells[0].Perforations[0].Orientation = PERF_ORIENTATION_X3X3;
+  Benchmark.Wells[0].Perforations[0].Rw = 0.3;
+  Benchmark.Wells[0].Perforations[0].S = 0.25;
+  Benchmark.Wells[0].Perforations[0].zbh = 0.0;
+
+  /* Set information for well zero,the producer */
+  Benchmark.Wells[1].Perforations[0].I = mx - 2;
+  Benchmark.Wells[1].Perforations[0].J = my - 2;
+  Benchmark.Wells[1].Perforations[0].K = mz - 2;
+  Benchmark.Wells[1].Perforations[0].BHPw = 3999;
+  Benchmark.Wells[1].Perforations[0].BHPo = 3999;
+  Benchmark.Wells[1].Perforations[0].Constraint = BHP_CONSTRAINT;
+  Benchmark.Wells[1].Perforations[0].IsActive = PETSC_TRUE;
+  Benchmark.Wells[1].Perforations[0].Orientation = PERF_ORIENTATION_X3X3;
+  Benchmark.Wells[1].Perforations[0].Rw = 0.3;
+  Benchmark.Wells[1].Perforations[0].S = 0.25;
+  Benchmark.Wells[1].Perforations[0].zbh = 0.0;
+
+  /* Not do adaptive time-step */
+  Benchmark.AdaptiveTimeStep = PETSC_FALSE;
+
+  /* Set the Times */
+  Benchmark.DeltaTP = 0.5;
+  Benchmark.DeltaTS = 0.1;
+  Benchmark.DSmax = 0.1;
+
+  /* Set the start and end time */
+  Benchmark.StartTime = 0.0;
+  Benchmark.EndTime = 7.0;
+
+  /* Now we solve */
+  ierr = DefiantIMPES2PhIterate(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DefiantBlackOil2PhValiantWriteVecs(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Sw is: \n");
+  ierr = VecView(Benchmark.Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"x1 is: \n");
+  ierr = VecView(Benchmark.x1,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"h1 is: \n");
+  ierr = VecView(Benchmark.h1,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+
+  /* Now we clean up */
+  ierr = DefiantDestroySimulationVecs(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+  ierr = DefiantDestroy2PhIMPESSystem(&Benchmark);CHKERRQ(ierr);CHKMEMQ;
+
+
+  PetscFunctionReturn(0);
+}

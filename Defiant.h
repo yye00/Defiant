@@ -397,16 +397,13 @@ static BlackOilReservoirSimulation* CurrentSimulation;
 /* Some examples */
 extern PetscErrorCode DefiantIMPES2PhBuckleyLeverett();
 extern PetscErrorCode DefiantIMPES3PhBuckleyLeverett();
-
 extern PetscErrorCode DefiantNewton2PhBuckleyLeverett();
 extern PetscErrorCode DefiantNewton3PhBuckleyLeverett();
-
 extern PetscErrorCode DefiantIMPES2PhFivePoint();
 extern PetscErrorCode DefiantIMPES3PhFivePoint();
-
 extern PetscErrorCode DefiantNewton2PhFivePoint();
 extern PetscErrorCode DefiantNewton3PhFivePoint();
-
+extern PetscErrorCode DefiantIMPES2PhBenchmark();
 
 /* Geometry routines */
 extern PetscErrorCode DefiantSetDACoords(BlackOilReservoirSimulation* MySim);
