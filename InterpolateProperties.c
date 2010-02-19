@@ -1454,6 +1454,28 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
           if (LocalFlowMask[k][j+1][i] == NO_FLUID_FLOW) {LocalRelPermox2p[i][j][k]=0.0;LocalRelPermwx2p[i][j][k]=0.0;LocalRelPermgx2p[i][j][k]=0.0;}
           if (LocalFlowMask[k-1][j][i] == NO_FLUID_FLOW) {LocalRelPermox3m[i][j][k]=0.0;LocalRelPermwx3m[i][j][k]=0.0;LocalRelPermgx3m[i][j][k]=0.0;}
           if (LocalFlowMask[k+1][j][i] == NO_FLUID_FLOW) {LocalRelPermox3p[i][j][k]=0.0;LocalRelPermwx3p[i][j][k]=0.0;LocalRelPermgx3p[i][j][k]=0.0;}
+
+          /* Debugging */
+#if DEFIANT_DEBUG
+          if (LocalRelPermox1m[k][j][i] > 1.0)
+           ierr = PetscPrintf(PETSC_COMM_WORLD,"We exceeded one for LocalRelPermox1m\n");
+          if (LocalRelPermox1p[k][j][i] > 1.0)
+           ierr = PetscPrintf(PETSC_COMM_WORLD,"We exceeded one for LocalRelPermox1p\n");
+          if (LocalRelPermwx1m[k][j][i] > 1.0)
+           ierr = PetscPrintf(PETSC_COMM_WORLD,"We exceeded one for LocalRelPermwx1m\n");
+          if (LocalRelPermwx1p[k][j][i] > 1.0)
+           ierr = PetscPrintf(PETSC_COMM_WORLD,"We exceeded one for LocalRelPermwx1p\n");
+
+          if (LocalRelPermox1m[k][j][i] < LocalRelPermox1m[k][j][i-1])
+           ierr = PetscPrintf(PETSC_COMM_WORLD,"We Problem with Kro increasing at x1m");
+          if (LocalRelPermox1p[k][j][i] < LocalRelPermox1p[k][j][i-1])
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"We Problem with Kro increasing at x1p");
+
+          if (LocalRelPermwx1m[k][j][i] > LocalRelPermwx1m[k][j][i-1])
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"We Problem with Krw increasing at x1m");
+          if (LocalRelPermwx1m[k][j][i] > LocalRelPermwx1p[k][j][i-1])
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"We Problem with Kro increasing at x1p");
+#endif
         }
 
         if (LocalRelPermox1m[k][j][i] < 0.0) LocalRelPermox1m[k][j][i] = 0.0;
@@ -1476,6 +1498,27 @@ PetscErrorCode DefiantComputeRelativePermsAtFaces(BlackOilReservoirSimulation* M
         if (LocalRelPermgx1p[k][j][i] < 0.0) LocalRelPermgx1p[k][j][i] = 0.0;
         if (LocalRelPermgx2p[k][j][i] < 0.0) LocalRelPermgx2p[k][j][i] = 0.0;
         if (LocalRelPermgx3p[k][j][i] < 0.0) LocalRelPermgx3p[k][j][i] = 0.0;
+
+        if (LocalRelPermox1m[k][j][i] > 1.0) LocalRelPermox1m[k][j][i] = 1.0;
+        if (LocalRelPermox2m[k][j][i] > 1.0) LocalRelPermox2m[k][j][i] = 1.0;
+        if (LocalRelPermox3m[k][j][i] > 1.0) LocalRelPermox3m[k][j][i] = 1.0;
+        if (LocalRelPermox1p[k][j][i] > 1.0) LocalRelPermox1p[k][j][i] = 1.0;
+        if (LocalRelPermox2p[k][j][i] > 1.0) LocalRelPermox2p[k][j][i] = 1.0;
+        if (LocalRelPermox3p[k][j][i] > 1.0) LocalRelPermox3p[k][j][i] = 1.0;
+
+        if (LocalRelPermwx1m[k][j][i] > 1.0) LocalRelPermwx1m[k][j][i] = 1.0;
+        if (LocalRelPermwx2m[k][j][i] > 1.0) LocalRelPermwx2m[k][j][i] = 1.0;
+        if (LocalRelPermwx3m[k][j][i] > 1.0) LocalRelPermwx3m[k][j][i] = 1.0;
+        if (LocalRelPermwx1p[k][j][i] > 1.0) LocalRelPermwx1p[k][j][i] = 1.0;
+        if (LocalRelPermwx2p[k][j][i] > 1.0) LocalRelPermwx2p[k][j][i] = 1.0;
+        if (LocalRelPermwx3p[k][j][i] > 1.0) LocalRelPermwx3p[k][j][i] = 1.0;
+
+        if (LocalRelPermgx1m[k][j][i] > 1.0) LocalRelPermgx1m[k][j][i] = 1.0;
+        if (LocalRelPermgx2m[k][j][i] > 1.0) LocalRelPermgx2m[k][j][i] = 1.0;
+        if (LocalRelPermgx3m[k][j][i] > 1.0) LocalRelPermgx3m[k][j][i] = 1.0;
+        if (LocalRelPermgx1p[k][j][i] > 1.0) LocalRelPermgx1p[k][j][i] = 1.0;
+        if (LocalRelPermgx2p[k][j][i] > 1.0) LocalRelPermgx2p[k][j][i] = 1.0;
+        if (LocalRelPermgx3p[k][j][i] > 1.0) LocalRelPermgx3p[k][j][i] = 1.0;
       }
     }
   }

@@ -177,9 +177,22 @@ extern PetscErrorCode DefiantBlackOil2PhValiantWriteVecs(BlackOilReservoirSimula
         ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Qw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
         ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPo, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
         ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].BHPw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+#if DEFIANT_DEBUG
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Just wrote: %g %g %g %g  To Observations\n",
+            MySim->Wells[WellID].Perforations[PerfID].Qo,
+            MySim->Wells[WellID].Perforations[PerfID].Qw,
+            MySim->Wells[WellID].Perforations[PerfID].BHPo,
+            MySim->Wells[WellID].Perforations[PerfID].BHPw);CHKERRQ(ierr);
+#endif
+
       } else if ( MySim->Wells[WellID].Perforations[PerfID].Constraint == MONITORING )  {
-        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Po, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
-        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].So, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Pw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+        ierr = VecSetValues(ObsVec, 1, &i, &MySim->Wells[WellID].Perforations[PerfID].Sw, INSERT_VALUES);CHKERRQ(ierr);CHKMEMQ;i++;
+#if DEFIANT_DEBUG
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Just wrote: %g %g  To Observations\n",
+            MySim->Wells[WellID].Perforations[PerfID].Pw,
+            MySim->Wells[WellID].Perforations[PerfID].Sw);CHKERRQ(ierr);
+#endif
       }
     }
 

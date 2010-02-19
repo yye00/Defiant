@@ -19,12 +19,17 @@ int main(int argc, char **argv) {
 
   /* Initialize PETSc */
   PetscInitialize(&argc, &argv, (char *) 0, help);
-
-  //ierr = DefiantIMPES2PhBuckleyLeverett();CHKERRQ(ierr);
+  ierr = PetscLogBegin();CHKERRQ(ierr);
+  
+  //ierr = DefiantIMPES2PhVictor();CHKERRQ(ierr);
+  
   //ierr = DefiantIMPES2PhFivePoint();CHKERRQ(ierr);
   //ierr = TestIterate();CHKERRQ(ierr);
-  ierr = DefiantIMPES2PhBenchmark();CHKERRQ(ierr);
+//  ierr = DefiantIMPES2PhBenchmark();CHKERRQ(ierr);
+  ierr = DefiantIMPES2PhTestValiant();CHKERRQ(ierr);
+  //ierr = DefiantIMPES2PhAziz();CHKERRQ(ierr);
 
+  ierr = PetscLogDump("LogFileDump");CHKERRQ(ierr);
   ierr = PetscFinalize();CHKERRQ(ierr);
 
   return 0;

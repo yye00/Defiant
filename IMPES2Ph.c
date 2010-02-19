@@ -246,7 +246,7 @@ extern PetscErrorCode DefiantIMPES2PhAssembleMatrix(BlackOilReservoirSimulation*
         row.k = k;
         if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz
             - 1) {
-          v[0] = 0.0;
+          v[0] = 1.0;
           ierr = MatSetValuesStencil(MySim->A, 1, &row, 1, &row, v,
               INSERT_VALUES);
           CHKERRQ(ierr);
@@ -414,7 +414,6 @@ extern PetscErrorCode DefiantIMPES2PhHandleWells(BlackOilReservoirSimulation* My
                   * MySim->Wells[WellID].Perforations[PerfIDMine].Krw / MySim->Wells[WellID].Perforations[PerfIDMine].Muw
                   * MySim->Wells[WellID].Perforations[PerfIDMine].h1 * MySim->Wells[WellID].Perforations[PerfIDMine].h2 * MySim->Wells[WellID].Perforations[PerfIDMine].h3
                   / MySim->Wells[WellID].Perforations[PerfIDMine].Bw;
-
               /* Since one perforation, the total well is the value here */
               MySim->Wells[WellID].TotalQo = qo;
               MySim->Wells[WellID].TotalQw = qw;
@@ -685,6 +684,10 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   /* Temporary vector */
   Vec vecLocalPw, vecLocalx3;
 
+  PetscScalar ***LocalKrw;
+  PetscScalar ***LocalRelPermwx1m;
+  PetscScalar ***LocalRelPermwx1p;
+
   /* Temporary IMPES variables */
   PetscInt TempInt;
   PetscReal TempSw;
@@ -726,6 +729,13 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
   ierr = DAVecGetArray(MySim->SimDA, MySim->Rhowx3m, &LocalRhowx3m);CHKERRQ(ierr);
   /* Grab the volume factor */
   ierr = DAVecGetArray(MySim->SimDA, MySim->Bw, &LocalBw);CHKERRQ(ierr);
+
+  ierr = DAVecGetArray(MySim->SimDA, MySim->Krw, &LocalKrw);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, MySim->RelPermwx1m, &LocalRelPermwx1m);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, MySim->RelPermwx1p, &LocalRelPermwx1p);CHKERRQ(ierr);
+
+
+
   /* Grab the local data for water pressure */
   ierr = DAGetLocalVector(MySim->SimDA, &vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
   ierr = DAGlobalToLocalBegin(MySim->SimDA,MySim->Pw,INSERT_VALUES,vecLocalPw);CHKERRQ(ierr);CHKMEMQ;
@@ -782,6 +792,7 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
       for (i = xs; i < xs + xm; i++) {
         if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz - 1) {}
         else if (ABS(LocalFlowMask[k][j][i]-FLUID_FLOW) < EPSILON) {
+          TempSw = LocalSw[k][j][i];
           LocalSw[k][j][i] = LocalSw[k][j][i]
                + MySim->DeltaTS*LocalBw[k][j][i]/LocalPhi[k][j][i]
                / (Localh1[k][j][i]*Localh2[k][j][i]*Localh3[k][j][i])
@@ -798,6 +809,23 @@ extern PetscErrorCode DefiantIMPES2PhUpdateSaturations(BlackOilReservoirSimulati
           if (LocalSw[k][j][i] < MySim->Swc) LocalSw[k][j][i] = MySim->Swc;
           else if (LocalSw[k][j][i] > 1.0 - MySim->Sor) LocalSw[k][j][i] = 1.0 - MySim->Sor;
           LocalSo[k][j][i] = 1.0 - LocalSw[k][j][i];
+
+          if(LocalSw[k][j][i] > LocalSw[k][j][i-1] && i > 1)
+          {
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"We Just improperly updated Sw\n");
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"Original Sw is %g \n", TempSw);
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"Saturation is: \n");
+            ierr = VecView(MySim->Sw ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"Relative Permeability is: \n");
+            ierr = VecView(MySim->Krw ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"RelativePermx1m is: \n");
+            ierr = VecView(MySim->RelPermwx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"RelativePermx1p is: \n");
+            ierr = VecView(MySim->RelPermwx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+            exit(1);
+          }
         }
       }
     }
@@ -891,14 +919,6 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     ierr = VecView(MySim->AKHx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Output AKHX1p is: ");
     ierr = VecView(MySim->AKHx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermox1m is: ");
-    ierr = VecView(MySim->RelPermox1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermox1p is: ");
-    ierr = VecView(MySim->RelPermox1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermwx1m is: ");
-    ierr = VecView(MySim->RelPermwx1m ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Output RelPermwx1p is: ");
-    ierr = VecView(MySim->RelPermwx1p ,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
 #endif
 
     ierr = DefiantComputeVolumeFactorsAtFaces(MySim);CHKERRQ(ierr);CHKMEMQ;
@@ -997,7 +1017,7 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     /* With the new pressure, we update sats then capillary pressures then pressures
      * Then update relative perms, porosity, density, volume factors and viscosities */
     /* update pressure dependent properties */
-    ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
+    //ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
     ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
     ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
     ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
@@ -1009,7 +1029,7 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     /* Now w eare ready to update the saturations using improved IMPES */
     MySim->CurrentTimeS = MySim->CurrentTimeP;
 
-    while(MySim->CurrentTimeS <= MySim->CurrentTimeP + MySim->DeltaTP)
+    while(MySim->CurrentTimeS < MySim->CurrentTimeP + MySim->DeltaTP)
     {
       ierr = DefiantIMPES2PhUpdateSaturations(MySim);CHKERRQ(ierr);CHKMEMQ;
       /* update saturation based properties */
@@ -1018,7 +1038,7 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
       /* update pw now that we have a new pcow */
       ierr = DefiantUpdatePwFromPcow(MySim);CHKERRQ(ierr);CHKMEMQ;
       /* with new pcow we have new pw, so new properties */
-      ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
+      //ierr = DefiantUpdatePorosity(MySim);CHKERRQ(ierr);CHKMEMQ;
       ierr = DefiantUpdateDensity(MySim);CHKERRQ(ierr);CHKMEMQ;
       ierr = DefiantUpdateVolumeFactors(MySim);CHKERRQ(ierr);CHKMEMQ;
       ierr = DefiantUpdateViscosities(MySim);CHKERRQ(ierr);CHKMEMQ;
@@ -1044,6 +1064,8 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
       ierr = VecView(MySim->Pw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
       ierr = PetscPrintf(PETSC_COMM_WORLD,"Krw is: ");
       ierr = VecView(MySim->Krw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Kro is: ");
+      ierr = VecView(MySim->Kro,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;      
       ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1p is: ");
       ierr = VecView(MySim->RelPermwx1p,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
       ierr = PetscPrintf(PETSC_COMM_WORLD,"RelPermwx1m is: ");
@@ -1070,11 +1092,6 @@ extern PetscErrorCode DefiantIMPES2PhIterate(BlackOilReservoirSimulation* MySim)
     MySim->CurrentTimeP = MySim->CurrentTimeP + MySim->DeltaTP;
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Current time is: %f ", MySim->CurrentTimeP);
-    if (MySim->CurrentTimeP == 1500){
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"FINAL FINAL Output saturations is: ");
-      ierr = VecView(MySim->Sw,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);CHKMEMQ;
-      break;
-    }
   }
 
   PetscFunctionReturn(0);
@@ -1333,5 +1350,60 @@ PetscErrorCode DefiantIMPES2PhDMMGComputeMatrix(DMMG dmmg, Mat jac, Mat B)
   ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
+  PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantGetSubMatrix"
+PetscErrorCode DefiantGetSubMatrix(Mat * A)
+{
+  PetscErrorCode ierr;
+  PetscInt AStart, AEnd, i;
+  PetscInt AnonZero;
+  PetscInt *indices;
+  PetscScalar DiagValue;
+  IS myis;
+  Mat SubA;
+  PetscViewer fd;
+  char file[PETSC_MAX_PATH_LEN];
+  PetscTruth flg;
+
+  ierr = MatGetOwnershipRange(*A,&AStart,&AEnd);CHKERRQ(ierr);
+
+  AnonZero = 0;
+  for(i=AStart;i<AEnd;i++)
+  {
+    ierr = MatGetValues(*A, 1, &i, 1, &i, &DiagValue);CHKERRQ(ierr);
+
+    if (ABS(DiagValue-2)<0.01)
+      AnonZero++;
+  }
+
+  ierr = PetscMalloc(AnonZero*sizeof(PetscInt),&indices);CHKERRQ(ierr);
+
+  AnonZero = 0;
+  for(i=AStart;i<AEnd;i++)
+  {
+    ierr = MatGetValues(*A, 1, &i, 1, &i, &DiagValue);CHKERRQ(ierr);
+    if (ABS(DiagValue-2)<0.01)
+    {
+      indices[AnonZero] = i;
+      AnonZero++;
+
+    }
+  }
+
+  ierr = ISCreateGeneral(PETSC_COMM_WORLD, AnonZero,indices, &myis);CHKERRQ(ierr);
+  ierr = ISView(myis, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  ierr = PetscFree(indices);CHKERRQ(ierr);
+  ierr = MatGetSubMatrix(*A, myis,myis, MAT_INITIAL_MATRIX, &SubA);CHKERRQ(ierr);
+
+
+  ierr = PetscOptionsGetString(PETSC_NULL,"-filename",file,PETSC_MAX_PATH_LEN-1,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(1,"Must indicate binary file with the -filename option");
+  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_WRITE,&fd);CHKERRQ(ierr);
+  ierr = MatView(SubA,fd);CHKERRQ(ierr);
+
+  PetscViewerDestroy(fd);
   PetscFunctionReturn(0);
 }

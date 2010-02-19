@@ -15,8 +15,8 @@ extern PetscErrorCode DefiantUpdateRelativePermeability(BlackOilReservoirSimulat
   PetscErrorCode ierr;
 
   /* This obviously needs to be parametrised */
-  ierr = DefiantComputeRelativePermsFromSatsCorey(MySim);CHKERRQ(ierr);
-
+  //ierr = DefiantComputeRelativePermsFromSatsCorey(MySim);CHKERRQ(ierr);
+  ierr = DefiantComputeRelativePermsFromSatsCoreyModified(MySim);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -53,6 +53,63 @@ extern PetscErrorCode DefiantComputeRelativePermsFromSatsCorey(
           Snw = (LocalSw[k][j][i] - MySim->Swc) / (1.0 - MySim->Swc);
           LocalKro[k][j][i] = pow(1.0 - Snw, 2.0) * (1.0 - pow(Snw, 2.0));
           LocalKrw[k][j][i] = pow(Snw, 4.0);
+        }
+      }
+    }
+  }
+
+  /* Restore the new arrays to their rightful place */
+  ierr = DAVecRestoreArray(MySim->SimDA, MySim->Kro, &LocalKro);CHKERRQ(ierr);
+  ierr = DAVecRestoreArray(MySim->SimDA, MySim->Krw, &LocalKrw);CHKERRQ(ierr);
+
+  /* Begin Assembly for vectors */
+  ierr = VecAssemblyBegin(MySim->Kro);CHKERRQ(ierr);
+  ierr = VecAssemblyBegin(MySim->Krw);CHKERRQ(ierr);
+
+  /* And end Assembly */
+  ierr = VecAssemblyEnd(MySim->Kro);CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(MySim->Krw);CHKERRQ(ierr);
+
+  PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "DefiantComputeRelativePermsFromSatsCoreyModified"
+extern PetscErrorCode DefiantComputeRelativePermsFromSatsCoreyModified(
+    BlackOilReservoirSimulation* MySim) {
+  PetscErrorCode ierr;
+  PetscInt i, j, k, mx, my, mz, xm, ym, zm, xs, ys, zs;
+  PetscScalar ***LocalFlowMask;
+  PetscScalar ***LocalKro, ***LocalKrw;
+  PetscScalar ***LocalSo, ***LocalSw;
+  PetscScalar Snw;
+  PetscScalar Krwmax, Kromax;
+
+  PetscFunctionBegin;
+  /* Get dimensions and extents of the local vectors */
+  ierr = DAGetInfo(MySim->SimDA, 0, &mx, &my, &mz, 0, 0, 0, 0, 0, 0, 0);CHKERRQ(ierr);
+  ierr = DAGetCorners(MySim->SimDA, &xs, &ys, &zs, &xm, &ym, &zm);CHKERRQ(ierr);
+  /* Grab the data for the flow field */
+  ierr = DAVecGetArray(MySim->SimDA, MySim->FlowMask, &LocalFlowMask);CHKERRQ(ierr);
+  /* Grab the local data for Saturations */
+  ierr = DAVecGetArray(MySim->SimDA, MySim->So, &LocalSo);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, MySim->Sw, &LocalSw);CHKERRQ(ierr);
+  /* Grab the local data for the relative permeabilities */
+  ierr = DAVecGetArray(MySim->SimDA, MySim->Kro, &LocalKro);CHKERRQ(ierr);
+  ierr = DAVecGetArray(MySim->SimDA, MySim->Krw, &LocalKrw);CHKERRQ(ierr);
+
+  Krwmax = 1.0;
+  Kromax = 0.5;
+
+  for (k = zs; k < zs + zm; k++) {
+    for (j = ys; j < ys + ym; j++) {
+      for (i = xs; i < xs + xm; i++) {
+        if (i == 0 || j == 0 || k == 0 || i == mx - 1 || j == my - 1 || k == mz
+            - 1) {
+        } else if (ABS(LocalFlowMask[k][j][i]-FLUID_FLOW) < EPSILON) {
+          Snw = (LocalSw[k][j][i] - MySim->Swc) / (1.0 - MySim->Swc - MySim->Sor);
+          LocalKro[k][j][i] = Kromax*pow(1.0 - Snw, 5.0);
+          LocalKrw[k][j][i] = Krwmax*pow(Snw, 2.0);
         }
       }
     }
