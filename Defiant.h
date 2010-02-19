@@ -301,6 +301,7 @@ extern PetscErrorCode DefiantUpdatePgFromPcog(BlackOilReservoirSimulation* MySim
 extern PetscErrorCode DefiantUpdateRelativePermeability(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantComputeRelativePermsFromSatsTables(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantComputeRelativePermsFromSatsCorey(BlackOilReservoirSimulation* MySim);
+extern PetscErrorCode DefiantComputeRelativePermsFromSatsCoreyModified(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantComputeRelativePermsFromSatsNaar(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantComputeRelativePermsFromSatsWygal(BlackOilReservoirSimulation* MySim);
 extern PetscErrorCode DefiantComputeRelativePermsFromSatsStonesI(BlackOilReservoirSimulation* MySim);
@@ -315,8 +316,6 @@ extern PetscErrorCode DefiantComputeRsoAtFaces(BlackOilReservoirSimulation* MySi
 
 /* Transmissibility calculation routines */
 extern PetscErrorCode DefiantComputeTransmissibilities(BlackOilReservoirSimulation* MySim);
-
-
 
 /* General 2Ph functions for various solvers */
 extern PetscErrorCode DefiantPhGravity(BlackOilReservoirSimulation* MySim);
@@ -404,6 +403,9 @@ extern PetscErrorCode DefiantIMPES3PhFivePoint();
 extern PetscErrorCode DefiantNewton2PhFivePoint();
 extern PetscErrorCode DefiantNewton3PhFivePoint();
 extern PetscErrorCode DefiantIMPES2PhBenchmark();
+extern PetscErrorCode DefiantIMPES2PhTestValiant();
+extern PetscErrorCode DefiantIMPES2PhAziz();
+extern PetscErrorCode DefiantIMPES2PhVictor();
 
 /* Geometry routines */
 extern PetscErrorCode DefiantSetDACoords(BlackOilReservoirSimulation* MySim);
